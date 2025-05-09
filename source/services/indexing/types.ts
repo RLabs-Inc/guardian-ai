@@ -94,6 +94,7 @@ export interface CodeSymbol {
   children?: string[];
   signature?: string;
   documentation?: string;
+  content?: string; // The actual code content of the symbol
 }
 
 /**

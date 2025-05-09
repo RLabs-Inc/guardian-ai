@@ -1,4 +1,4 @@
-// src/commands/ask.tsx
+// source/commands/ask.tsx
 import React, {useState, useEffect} from 'react';
 import {Box} from 'ink';
 import Spinner from 'ink-spinner';
@@ -10,7 +10,7 @@ import {InMemoryRAGService} from '../services/rag/ragService.js';
 import {NodeFileSystemService} from '../services/fileSystem/fileSystemService.js';
 import {TreeSitterIndexingService} from '../services/indexing/indexingService.js';
 import * as path from 'path';
-import * as fs from 'fs-extra';
+import fs from 'fs-extra';
 
 interface AskCommandProps {
 	question: string;

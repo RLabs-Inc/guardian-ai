@@ -10,7 +10,7 @@ const cli = meow(
     $ guardian-ai <command> [options]
 
   Commands
-    init <project_path>     Initialize GuardianAI on a project
+    init [project_path]     Initialize GuardianAI on a project (defaults to current directory)
     analyze                 Analyze the current project
     ask <question>          Ask a question about the codebase
     task <description>      Define a task for the Implementer agent

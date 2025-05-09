@@ -1,9 +1,10 @@
-// src/commands/init.tsx
+// source/commands/init.tsx
 import React, {useState, useEffect} from 'react';
 import {Box} from 'ink';
 import Spinner from 'ink-spinner';
 import {Text as ThemedText} from '../components/common/Text.js';
 import {NodeFileSystemService} from '../services/fileSystem/fileSystemService.js';
+import fs from 'fs-extra';
 
 interface InitCommandProps {
 	path?: string;
@@ -22,20 +23,24 @@ const InitCommand: React.FC<InitCommandProps> = ({path, options}) => {
 	useEffect(() => {
 		const initialize = async () => {
 			try {
-				if (!path) {
-					throw new Error('Project path is required.');
-				}
-
 				// Create file system service
 				const fileSystem = new NodeFileSystemService();
 
+				// Use current directory if no path provided
+				const projectPath = path || process.cwd();
+
 				// Check if directory exists
-				// For now, just check if we can list files in the directory
-				await fileSystem.listFiles(path, false);
+				const pathExists = await fs.pathExists(projectPath);
+				if (!pathExists) {
+					throw new Error(`Directory ${projectPath} does not exist.`);
+				}
+
+				// Make sure we can list files in the directory
+				await fileSystem.listFiles(projectPath, false);
 
 				// Create GuardianAI config file
 				await fileSystem.writeFile(
-					`${path}/.guardian-ai.json`,
+					`${projectPath}/.guardian-ai.json`,
 					JSON.stringify(
 						{
 							initialized: true,
@@ -48,7 +53,7 @@ const InitCommand: React.FC<InitCommandProps> = ({path, options}) => {
 				);
 
 				setStatus('success');
-				setMessage(`GuardianAI initialized in ${path}`);
+				setMessage(`GuardianAI initialized in ${projectPath}`);
 			} catch (error) {
 				setStatus('error');
 				setMessage(error instanceof Error ? error.message : String(error));

@@ -1,11 +1,11 @@
-// src/app.tsx
+// source/app.tsx
 import React, {useState} from 'react';
-import {Box, Text} from 'ink';
+import {Box, Text, useApp, useInput} from 'ink';
 import TextInput from 'ink-text-input';
 import {ThemeProvider} from './themes/context.js';
 import {Text as ThemedText} from './components/common/Text.js';
 import InitCommand from './commands/init.js';
-import AnalyzeCommand from './commands/analize.js';
+import AnalyzeCommand from './commands/analyze.js';
 import AskCommand from './commands/ask.js';
 import TaskCommand from './commands/task.js';
 import HomeScreen from './screens/home.js';
@@ -20,12 +20,26 @@ interface AppProps {
 	};
 }
 
-const App: React.FC<AppProps> = ({command: initialCommand, args: initialArgs, options}) => {
+const App: React.FC<AppProps> = ({
+	command: initialCommand,
+	args: initialArgs,
+	options,
+}) => {
 	const [loading, _setLoading] = useState(false);
 	const [error, _setError] = useState<string | null>(null);
 	const [command, setCommand] = useState<string | undefined>(initialCommand);
 	const [args, setArgs] = useState<string[]>(initialArgs);
 	const [inputValue, setInputValue] = useState<string>('');
+	const {exit} = useApp();
+
+	useInput((input, key) => {
+		if (input === 'q') {
+			exit();
+		}
+		if (key.escape) {
+			handleEscape();
+		}
+	});
 
 	// Handle command selection from home screen
 	const handleCommandSelect = (selectedCommand: string) => {
@@ -44,9 +58,7 @@ const App: React.FC<AppProps> = ({command: initialCommand, args: initialArgs, op
 	const handleCommand = () => {
 		if (!command) {
 			// No command specified, show home screen
-			return (
-				<HomeScreen onSelectCommand={handleCommandSelect} />
-			);
+			return <HomeScreen onSelectCommand={handleCommandSelect} />;
 		}
 
 		switch (command.toLowerCase()) {
@@ -55,13 +67,17 @@ const App: React.FC<AppProps> = ({command: initialCommand, args: initialArgs, op
 			case 'analyze':
 				return <AnalyzeCommand options={options} />;
 			case 'ask':
-				return args.length > 0 
-					? <AskCommand question={args.join(' ')} options={options} />
-					: renderInputPrompt("Ask a question about your code:");
+				return args.length > 0 ? (
+					<AskCommand question={args.join(' ')} options={options} />
+				) : (
+					renderInputPrompt('Ask a question about your code:')
+				);
 			case 'task':
-				return args.length > 0 
-					? <TaskCommand description={args.join(' ')} options={options} />
-					: renderInputPrompt("Define a development task:");
+				return args.length > 0 ? (
+					<TaskCommand description={args.join(' ')} options={options} />
+				) : (
+					renderInputPrompt('Define a development task:')
+				);
 			default:
 				return (
 					<Box flexDirection="column">
@@ -89,7 +105,9 @@ const App: React.FC<AppProps> = ({command: initialCommand, args: initialArgs, op
 				</Box>
 				<ThemedText variant="dim">Type and press Enter</ThemedText>
 				<Box marginTop={1}>
-					<ThemedText variant="dim">(Press Escape to return to menu)</ThemedText>
+					<ThemedText variant="dim">
+						(Press Escape to return to menu)
+					</ThemedText>
 				</Box>
 			</Box>
 		);
@@ -97,10 +115,8 @@ const App: React.FC<AppProps> = ({command: initialCommand, args: initialArgs, op
 
 	// Return to home screen when Escape is pressed
 	const handleEscape = () => {
-		if (command === 'ask' || command === 'task') {
-			setCommand(undefined);
-			setInputValue('');
-		}
+		setCommand(undefined);
+		setInputValue('');
 	};
 
 	return (

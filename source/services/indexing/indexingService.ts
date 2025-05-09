@@ -9,12 +9,16 @@ import {
   CodeDependency
 } from './types.js';
 import { FileSystemService, FileSystemFilter } from '../fileSystem/types.js';
+import { ParserFactory } from './parsers/parserFactory.js';
+import { TreeSitterManager } from './treeSitter.js';
 
 /**
  * Implementation of the Tree-sitter based code indexing service
  */
 export class TreeSitterIndexingService implements IndexingService {
   private fileSystem: FileSystemService;
+  private parserFactory: ParserFactory;
+  private treeSitter: TreeSitterManager;
   private projectRoot: string = '';
   private indexedCodebase: IndexedCodebase = {
     symbols: {},
@@ -30,6 +34,8 @@ export class TreeSitterIndexingService implements IndexingService {
 
   constructor(fileSystem: FileSystemService) {
     this.fileSystem = fileSystem;
+    this.parserFactory = ParserFactory.getInstance();
+    this.treeSitter = TreeSitterManager.getInstance();
   }
 
   /**
@@ -42,6 +48,10 @@ export class TreeSitterIndexingService implements IndexingService {
     try {
       this.projectRoot = projectPath;
       console.log(`Indexing codebase at ${projectPath}`);
+      
+      // Initialize parser factory and Tree-sitter
+      await this.parserFactory.initialize();
+      await this.treeSitter.initialize();
       
       // Create a fresh index
       this.indexedCodebase = {
@@ -66,10 +76,7 @@ export class TreeSitterIndexingService implements IndexingService {
           /build/,
           /\.guardian-ai/
         ],
-        includeExtensions: [
-          '.js', '.jsx', '.ts', '.tsx', '.py', '.java', '.c', '.cpp',
-          '.cs', '.go', '.rb', '.php', '.swift', '.rs'
-        ]
+        includeExtensions: this.parserFactory.getSupportedExtensions()
       };
 
       // Customize filter based on options
@@ -140,8 +147,16 @@ export class TreeSitterIndexingService implements IndexingService {
       // Get relative path to project root
       const relativePath = path.relative(this.projectRoot, filePath);
       
-      // Mock simple parsing for now (in a real implementation, this would use Tree-sitter)
-      const symbols = this.mockParseFile(relativePath, fileContent.content, extension);
+      // Get appropriate parser
+      const parser = this.parserFactory.getParserForExtension(extension);
+      
+      if (!parser) {
+        console.warn(`No parser available for ${extension} files, skipping ${filePath}`);
+        return;
+      }
+      
+      // Parse the file and extract symbols
+      const symbols = await parser.parseFile(relativePath, fileContent.content, extension);
       
       // Add symbols to the index
       for (const symbol of symbols) {
@@ -149,178 +164,14 @@ export class TreeSitterIndexingService implements IndexingService {
         this.indexedCodebase.symbols[symbolId] = symbol;
       }
       
-      // Mock dependencies (in a real implementation, this would be more sophisticated)
-      const dependencies = this.mockExtractDependencies(relativePath, fileContent.content, extension);
+      // Extract dependencies
+      const dependencies = await parser.extractDependencies(relativePath, fileContent.content, extension);
       this.indexedCodebase.dependencies.push(...dependencies);
       
     } catch (error) {
       console.warn(`Error processing file ${filePath}: ${error}`);
       // Continue with next file
     }
-  }
-
-  /**
-   * Mock implementation of file parsing (would use Tree-sitter in full implementation)
-   */
-  private mockParseFile(
-    filePath: string, 
-    content: string, 
-    extension: string
-  ): CodeSymbol[] {
-    const symbols: CodeSymbol[] = [];
-    
-    // Very basic mock parsing based on file extension
-    if (['.js', '.jsx', '.ts', '.tsx'].includes(extension)) {
-      // Simple regex-based extraction of JavaScript/TypeScript symbols
-      // Functions
-      const functionMatches = content.matchAll(/function\s+(\w+)\s*\(([^)]*)\)/g);
-      for (const match of functionMatches) {
-        const name = match[1] || '';
-        const lineIndex = this.findLineIndex(content, match.index || 0);
-
-        symbols.push({
-          name,
-          type: 'function',
-          location: {
-            filePath,
-            startLine: lineIndex,
-            endLine: lineIndex + 5, // Arbitrary end line
-            startColumn: 0,
-            endColumn: 0
-          },
-          signature: `function ${name}(${match[2] || ''})`,
-        });
-      }
-      
-      // Classes
-      const classMatches = content.matchAll(/class\s+(\w+)/g);
-      for (const match of classMatches) {
-        const name = match[1] || '';
-        const lineIndex = this.findLineIndex(content, match.index || 0);
-
-        symbols.push({
-          name,
-          type: 'class',
-          location: {
-            filePath,
-            startLine: lineIndex,
-            endLine: lineIndex + 10, // Arbitrary end line
-            startColumn: 0,
-            endColumn: 0
-          }
-        });
-      }
-      
-      // Interfaces (TypeScript)
-      if (['.ts', '.tsx'].includes(extension)) {
-        const interfaceMatches = content.matchAll(/interface\s+(\w+)/g);
-        for (const match of interfaceMatches) {
-          const name = match[1] || '';
-          const lineIndex = this.findLineIndex(content, match.index || 0);
-
-          symbols.push({
-            name,
-            type: 'interface',
-            location: {
-              filePath,
-              startLine: lineIndex,
-              endLine: lineIndex + 5, // Arbitrary end line
-              startColumn: 0,
-              endColumn: 0
-            }
-          });
-        }
-      }
-    } else if (extension === '.py') {
-      // Basic Python symbol extraction
-      const functionMatches = content.matchAll(/def\s+(\w+)\s*\(([^)]*)\):/g);
-      for (const match of functionMatches) {
-        const name = match[1] || '';
-        const lineIndex = this.findLineIndex(content, match.index || 0);
-
-        symbols.push({
-          name,
-          type: 'function',
-          location: {
-            filePath,
-            startLine: lineIndex,
-            endLine: lineIndex + 5, // Arbitrary end line
-            startColumn: 0,
-            endColumn: 0
-          },
-          signature: `def ${name}(${match[2] || ''})`,
-        });
-      }
-      
-      // Python classes
-      const classMatches = content.matchAll(/class\s+(\w+)/g);
-      for (const match of classMatches) {
-        const name = match[1] || '';
-        const lineIndex = this.findLineIndex(content, match.index || 0);
-
-        symbols.push({
-          name,
-          type: 'class',
-          location: {
-            filePath,
-            startLine: lineIndex,
-            endLine: lineIndex + 10, // Arbitrary end line
-            startColumn: 0,
-            endColumn: 0
-          }
-        });
-      }
-    }
-    
-    return symbols;
-  }
-
-  /**
-   * Mock extraction of dependencies
-   */
-  private mockExtractDependencies(
-    filePath: string, 
-    content: string, 
-    extension: string
-  ): CodeDependency[] {
-    const dependencies: CodeDependency[] = [];
-    
-    // Very basic mock dependency extraction
-    if (['.js', '.jsx', '.ts', '.tsx'].includes(extension)) {
-      // Look for imports
-      const importMatches = content.matchAll(/import\s+(?:(\w+)|{([^}]+)})\s+from\s+['"]([^'"]+)['"]/g);
-      for (const match of importMatches) {
-        const source = filePath;
-        // const importName = match[1] || match[2]; // Not used
-        const target = match[3];
-        
-        dependencies.push({
-          source,
-          target: target || '',
-          type: 'import'
-        });
-      }
-    } else if (extension === '.py') {
-      // Python imports
-      const importMatches = content.matchAll(/(?:import|from)\s+(\w+)/g);
-      for (const match of importMatches) {
-        dependencies.push({
-          source: filePath,
-          target: match[1] || '',
-          type: 'import'
-        });
-      }
-    }
-    
-    return dependencies;
-  }
-
-  /**
-   * Find the line index for a character position
-   */
-  private findLineIndex(content: string, position: number): number {
-    const lines = content.substring(0, position).split('\n');
-    return lines.length;
   }
 
   /**

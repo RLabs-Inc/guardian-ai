@@ -1,5 +1,5 @@
-// src/services/fileSystem/fileSystemService.ts
-import * as fs from 'fs-extra';
+// source/services/fileSystem/fileSystemService.ts
+import fs from 'fs-extra';
 import * as path from 'path';
 import {simpleGit, SimpleGit} from 'simple-git';
 import {
