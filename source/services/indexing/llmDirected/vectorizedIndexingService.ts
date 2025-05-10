@@ -46,9 +46,13 @@ export class VectorizedIndexingService implements IndexingService {
 		projectPath: string,
 		options?: IndexingOptions,
 	): Promise<IndexedCodebase> {
+		// Get memory monitor
+		const memoryMonitor = getMemoryMonitor();
+
 		try {
+			// Initialize memory monitoring
+			memoryMonitor.logMemoryUsage('indexing_start', { projectPath });
 			console.log(`Starting vectorized indexing of ${projectPath}`);
-			// projectRoot is not needed
 
 			// Ensure the vector storage is initialized
 			const vectorStoragePath = path.join(
@@ -59,6 +63,8 @@ export class VectorizedIndexingService implements IndexingService {
 			await fs.ensureDir(vectorStoragePath);
 			await this.vectorStorage.initialize();
 
+			memoryMonitor.logMemoryUsage('vector_storage_initialized');
+
 			// First, perform the base indexing
 			console.log('Performing base indexing...');
 			const indexedCodebase = await this.baseIndexingService.indexCodebase(
@@ -66,17 +72,47 @@ export class VectorizedIndexingService implements IndexingService {
 				options,
 			);
 
+			memoryMonitor.logMemoryUsage('base_indexing_complete', {
+				symbolCount: Object.keys(indexedCodebase.symbols).length,
+				relationshipCount: indexedCodebase.dependencies.length
+			});
+
+			// Force garbage collection after the memory-intensive base indexing
+			memoryMonitor.forceGC();
+
 			// Generate and store embeddings for all symbols
 			console.log('Generating vector embeddings for symbols...');
 			await this.generateAndStoreSymbolEmbeddings(indexedCodebase);
+
+			// Force garbage collection between major operations
+			memoryMonitor.forceGC();
+			memoryMonitor.logMemoryUsage('symbol_embeddings_completed');
 
 			// Generate and store embeddings for relationships
 			console.log('Generating vector embeddings for relationships...');
 			await this.generateAndStoreRelationshipEmbeddings(indexedCodebase);
 
+			// Final garbage collection
+			memoryMonitor.forceGC();
+			memoryMonitor.logMemoryUsage('indexing_complete');
+
 			console.log('Vectorized indexing complete.');
+
+			// Clean up some memory before returning the result
+			// but keep essential data like symbol names and locations
+			Object.values(indexedCodebase.symbols).forEach(symbol => {
+				if (symbol.content && symbol.content.length > 1000) {
+					symbol.content = ''; // Clear large content strings
+				}
+			});
+
 			return indexedCodebase;
 		} catch (error) {
+			memoryMonitor.logMemoryUsage('indexing_error', {
+				errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+				message: error instanceof Error ? error.message : String(error)
+			});
+
 			console.error('Error in vectorized indexing:', error);
 			throw new Error(
 				`Failed to index codebase with vector embeddings: ${

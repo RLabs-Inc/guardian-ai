@@ -3,13 +3,14 @@
 import { LocalIndex, MetadataTypes } from 'vectra';
 import path from 'path';
 import fs from 'fs-extra';
-import { 
-  VectorStorageService, 
-  VectorStorageOptions, 
-  VectorItem, 
+import {
+  VectorStorageService,
+  VectorStorageOptions,
+  VectorItem,
   VectorQueryOptions,
   VectorQueryResult
 } from './types.js';
+import { getMemoryMonitor } from '../utils/memoryMonitor.js';
 
 /**
  * Implementation of VectorStorageService using Vectra
@@ -124,48 +125,97 @@ export class VectraStorageService implements VectorStorageService {
   async storeItems(items: VectorItem[]): Promise<string[]> {
     this.ensureInitialized();
 
+    // Get memory monitor
+    const memoryMonitor = getMemoryMonitor();
+
     try {
+      // Log initial memory usage
+      memoryMonitor.logMemoryUsage('store_items_start', { itemCount: items.length });
+
       const ids: string[] = [];
-      const pendingInserts = [];
 
-      // Prepare all items for insertion
-      for (const item of items) {
-        const id = this.generateItemId(item);
-        ids.push(id);
+      // Use a smaller batch size to reduce memory pressure
+      const BATCH_SIZE = 25; // Reduced from 100 to lower memory usage
 
-        pendingInserts.push({
-          item: {
-            vector: item.vector,
-            metadata: item.metadata
-          },
-          id
+      // Process items in batches to avoid building a large pendingInserts array
+      for (let batchIndex = 0; batchIndex < Math.ceil(items.length / BATCH_SIZE); batchIndex++) {
+        const batchStartIndex = batchIndex * BATCH_SIZE;
+        const batchEndIndex = Math.min((batchIndex + 1) * BATCH_SIZE, items.length);
+        const currentBatchSize = batchEndIndex - batchStartIndex;
+
+        memoryMonitor.logMemoryUsage(`store_items_batch_${batchIndex}_start`, {
+          batchIndex,
+          itemCount: currentBatchSize
         });
-      }
 
-      // Insert items in batches of 100
-      const BATCH_SIZE = 100;
-      for (let i = 0; i < pendingInserts.length; i += BATCH_SIZE) {
-        const batch = pendingInserts.slice(i, i + BATCH_SIZE);
-        
-        // Insert the batch
-        const results = await Promise.all(
-          batch.map(entry => 
-            this.index!.insertItem(entry.item)
-              .then(vectraId => ({ id: entry.id, vectraId }))
-          )
-        );
+        // Prepare the current batch
+        const batchIds: string[] = [];
+        const batchPendingInserts = [];
 
-        // Update ID mapping
+        for (let i = batchStartIndex; i < batchEndIndex; i++) {
+          const item = items[i];
+          const id = this.generateItemId(item);
+          batchIds.push(id);
+
+          batchPendingInserts.push({
+            item: {
+              vector: item.vector,
+              metadata: item.metadata
+            },
+            id
+          });
+        }
+
+        // Insert items one by one to avoid concurrent operations that may use more memory
+        // This is slightly slower but uses much less memory
+        const results = [];
+        for (const entry of batchPendingInserts) {
+          try {
+            const vectraId = await this.index!.insertItem(entry.item);
+            results.push({ id: entry.id, vectraId });
+          } catch (insertError) {
+            console.error(`Error inserting item ${entry.id}:`, insertError);
+            // Continue with other items even if one fails
+          }
+        }
+
+        // Update ID mapping for this batch
         for (const { id, vectraId } of results) {
           this.itemIdMap.set(id, String(vectraId));
         }
+
+        // Add batch IDs to overall IDs
+        ids.push(...batchIds);
+
+        // Save mapping periodically to avoid losing data if there's an error
+        if (batchIndex % 4 === 0 || batchIndex === Math.ceil(items.length / BATCH_SIZE) - 1) {
+          await this.saveIdMapping();
+          memoryMonitor.logMemoryUsage(`store_items_batch_${batchIndex}_mapping_saved`);
+        }
+
+        // Clear arrays to free memory
+        batchPendingInserts.length = 0;
+
+        // Force garbage collection every few batches
+        if (batchIndex % 5 === 0) {
+          memoryMonitor.forceGC();
+        }
+
+        memoryMonitor.logMemoryUsage(`store_items_batch_${batchIndex}_complete`);
       }
 
-      // Save the updated ID mapping
+      // Final ID mapping save
       await this.saveIdMapping();
+
+      memoryMonitor.logMemoryUsage('store_items_complete', { itemCount: items.length });
 
       return ids;
     } catch (error) {
+      memoryMonitor.logMemoryUsage('store_items_error', {
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error)
+      });
+
       console.error('Error storing vector items in batch:', error);
       throw new Error(`Failed to store vector items in batch: ${error instanceof Error ? error.message : String(error)}`);
     }
