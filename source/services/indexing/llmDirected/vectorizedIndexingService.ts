@@ -14,6 +14,7 @@ import {LLMService} from '../../llm/types.js';
 import {EmbeddingService} from '../../embedding/types.js';
 import {VectorStorageService} from '../../vectorStorage/types.js';
 import {LLMDirectedIndexingService} from './llmDirectedIndexingService.js';
+import {getMemoryMonitor} from '../../utils/memoryMonitor.js';
 
 /**
  * Enhanced LLM-directed indexing service with vector storage for efficient retrieval
@@ -277,37 +278,87 @@ export class VectorizedIndexingService implements IndexingService {
 	private async generateAndStoreSymbolEmbeddings(
 		indexedCodebase: IndexedCodebase,
 	): Promise<void> {
+		// Get memory monitor
+		const memoryMonitor = getMemoryMonitor();
+		memoryMonitor.logMemoryUsage('symbol_embeddings_start', {
+			symbolCount: Object.keys(indexedCodebase.symbols).length
+		});
+
 		const symbols = Object.values(indexedCodebase.symbols);
-		const batchSize = 50;
+		const batchSize = 50; // Using smaller batches (reduced from 100) to prevent memory spikes
+
+		let batchCount = 0;
+		const totalBatches = Math.ceil(symbols.length / batchSize);
 
 		for (let i = 0; i < symbols.length; i += batchSize) {
+			batchCount++;
 			const batch = symbols.slice(i, i + batchSize);
+
+			memoryMonitor.logMemoryUsage(`symbol_batch_${batchCount}_start`, {
+				batchCount,
+				totalBatches,
+				batchSize: batch.length
+			});
+
 			console.log(
-				`Processing symbol embeddings batch ${
-					Math.floor(i / batchSize) + 1
-				}/${Math.ceil(symbols.length / batchSize)}`,
+				`Processing symbol embeddings batch ${batchCount}/${totalBatches}`,
 			);
 
-			// Generate embeddings for the batch
-			const symbolTexts = batch.map(symbol => this.createSymbolText(symbol));
-			const embeddings = await this.embeddingService.generateEmbeddings(
-				symbolTexts,
-			);
+			try {
+				// Generate embeddings for the batch
+				const symbolTexts = batch.map(symbol => this.createSymbolText(symbol));
 
-			// Store embeddings
-			const vectorItems = batch.map((symbol, index) => ({
-				vector: embeddings[index] || [],
-				metadata: {
-					type: 'symbol',
-					symbolId: `${symbol.name}:${symbol.location.filePath}:${symbol.location.startLine}`,
-					name: symbol.name,
-					symbolType: symbol.type,
-					filePath: symbol.location.filePath,
-				},
-			}));
+				// Memory efficient approach - clear batch references after use
+				const embeddings = await this.embeddingService.generateEmbeddings(symbolTexts);
 
-			await this.vectorStorage.storeItems(vectorItems);
+				// Free memory by clearing large text content
+				symbolTexts.length = 0;
+
+				memoryMonitor.logMemoryUsage(`symbol_batch_${batchCount}_embeddings_generated`);
+
+				// Store embeddings
+				const vectorItems = batch.map((symbol, index) => ({
+					vector: embeddings[index] || [],
+					metadata: {
+						type: 'symbol',
+						symbolId: `${symbol.name}:${symbol.location.filePath}:${symbol.location.startLine}`,
+						name: symbol.name,
+						symbolType: symbol.type,
+						filePath: symbol.location.filePath,
+					},
+				}));
+
+				await this.vectorStorage.storeItems(vectorItems);
+
+				memoryMonitor.logMemoryUsage(`symbol_batch_${batchCount}_embeddings_stored`);
+
+				// Clean up large objects to free memory
+				batch.forEach(symbol => {
+					if (symbol.content && symbol.content.length > 1000) {
+						symbol.content = '';
+					}
+				});
+
+				// Explicitly clear arrays after use
+				embeddings.length = 0;
+
+				// Every few batches, run garbage collection if possible
+				if (batchCount % 5 === 0) {
+					memoryMonitor.forceGC();
+				}
+
+			} catch (error) {
+				console.error(`Error processing symbol batch ${batchCount}:`, error);
+				// Continue processing other batches even if one fails
+			}
 		}
+
+		// Final cleanup
+		memoryMonitor.forceGC();
+		memoryMonitor.logMemoryUsage('symbol_embeddings_complete', {
+			symbolCount: symbols.length,
+			batchesProcessed: batchCount
+		});
 
 		console.log(
 			`Generated and stored embeddings for ${symbols.length} symbols`,

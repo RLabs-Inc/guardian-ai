@@ -1068,17 +1068,39 @@ export class IndexingAgent {
 
       // Parse the final response
       try {
-        return parseAgentResponse<Res>(jsonResponse);
+        const result = parseAgentResponse<Res>(jsonResponse);
+
+        // Log memory after successful response parsing
+        memoryMonitor.logMemoryUsage(`${requestType}_response_parsed_success`);
+
+        // Cleanup to free memory
+        this.cleanupRequest(request);
+        if (jsonResponse.length > 10000) {
+          jsonResponse = '';
+        }
+
+        return result;
       } catch (parseError) {
         console.error("Error parsing JSON response:", parseError);
         console.error("JSON content was:", jsonResponse.substring(0, 500) + (jsonResponse.length > 500 ? "..." : ""));
 
+        memoryMonitor.logMemoryUsage(`${requestType}_parse_error`, { errorType: 'parseError' });
+
         // Attempt to repair the JSON before giving up
         try {
           const repairedJson = this.repairJsonResponse(jsonResponse, request.action);
-          return parseAgentResponse<Res>(repairedJson);
+          const result = parseAgentResponse<Res>(repairedJson);
+
+          memoryMonitor.logMemoryUsage(`${requestType}_repair_success`);
+
+          // Cleanup to free memory
+          this.cleanupRequest(request);
+          jsonResponse = '';
+
+          return result;
         } catch (repairError) {
           console.error("Failed to repair JSON:", repairError);
+          memoryMonitor.logMemoryUsage(`${requestType}_repair_failed`, { errorType: 'repairError' });
 
           // Create a fallback response with the original action
           const fallbackResponse = {
@@ -1088,11 +1110,19 @@ export class IndexingAgent {
             data: {},
           } as unknown as Res;
 
+          // Cleanup to free memory
+          this.cleanupRequest(request);
+          jsonResponse = '';
+
           return fallbackResponse;
         }
       }
     } catch (error) {
       console.error('Error making agent request:', error);
+      memoryMonitor.logMemoryUsage(`${requestType}_request_error`, {
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error)
+      });
 
       // Create a generic error response
       const errorResponse = {
@@ -1101,7 +1131,24 @@ export class IndexingAgent {
         message: error instanceof Error ? error.message : String(error),
       } as unknown as Res;
 
+      // Try to clean up memory even on error
+      try {
+        this.cleanupRequest(request);
+      } catch (cleanupError) {
+        console.error('Error during cleanup after error:', cleanupError);
+      }
+
       return errorResponse;
+    }
+
+    // Log memory at the end of processing
+    finally {
+      memoryMonitor.logMemoryUsage(`${requestType}_request_complete`);
+
+      // If the snapshot list is getting too large, clear it to prevent memory bloat
+      if (memoryMonitor.getSnapshots().length > 1000) {
+        memoryMonitor.clearSnapshots();
+      }
     }
   }
 
