@@ -5,8 +5,7 @@ import {
   IndexingService,
   IndexedCodebase,
   CodeSymbol,
-  IndexingOptions,
-  CodeDependency
+  IndexingOptions
 } from './types.js';
 import { FileSystemService, FileSystemFilter } from '../fileSystem/types.js';
 import { ParserFactory } from './parsers/parserFactory.js';

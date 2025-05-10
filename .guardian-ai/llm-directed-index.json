@@ -1,0 +1,4646 @@
+{
+  "symbols": {
+    "CLAUDE.md:CLAUDE.md:1": {
+      "name": "CLAUDE.md",
+      "type": "section",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 1,
+        "endLine": 1,
+        "startColumn": 1,
+        "endColumn": 12
+      },
+      "content": "# CLAUDE.md"
+    },
+    "Project Overview:CLAUDE.md:5": {
+      "name": "Project Overview",
+      "type": "section",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 5,
+        "endLine": 5,
+        "startColumn": 1,
+        "endColumn": 20
+      },
+      "content": "## Project Overview"
+    },
+    "Development Commands:CLAUDE.md:13": {
+      "name": "Development Commands",
+      "type": "section",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 13,
+        "endLine": 13,
+        "startColumn": 1,
+        "endColumn": 24
+      },
+      "content": "## Development Commands"
+    },
+    "Install dependencies:CLAUDE.md:16": {
+      "name": "Install dependencies",
+      "type": "command",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 16,
+        "endLine": 17,
+        "startColumn": 1,
+        "endColumn": 35
+      },
+      "content": "# Install dependencies\nnpm install",
+      "signature": "npm install"
+    },
+    "Or with Bun (preferred):CLAUDE.md:18": {
+      "name": "Or with Bun (preferred)",
+      "type": "command",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 18,
+        "endLine": 19,
+        "startColumn": 1,
+        "endColumn": 38
+      },
+      "content": "# Or with Bun (preferred)\nbun install",
+      "signature": "bun install"
+    },
+    "Run the postinstall script to set up WASM parsers:CLAUDE.md:21": {
+      "name": "Run the postinstall script to set up WASM parsers",
+      "type": "command",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 21,
+        "endLine": 22,
+        "startColumn": 1,
+        "endColumn": 71
+      },
+      "content": "# Run the postinstall script to set up WASM parsers\nbun run setup-wasm",
+      "signature": "bun run setup-wasm"
+    },
+    "Development mode:CLAUDE.md:24": {
+      "name": "Development mode",
+      "type": "command",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 24,
+        "endLine": 25,
+        "startColumn": 1,
+        "endColumn": 31
+      },
+      "content": "# Development mode\nbun run dev",
+      "signature": "bun run dev"
+    },
+    "Build the project:CLAUDE.md:27": {
+      "name": "Build the project",
+      "type": "command",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 27,
+        "endLine": 28,
+        "startColumn": 1,
+        "endColumn": 34
+      },
+      "content": "# Build the project\nbun run build",
+      "signature": "bun run build"
+    },
+    "Start the application:CLAUDE.md:30": {
+      "name": "Start the application",
+      "type": "command",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 30,
+        "endLine": 31,
+        "startColumn": 1,
+        "endColumn": 38
+      },
+      "content": "# Start the application\nbun run start",
+      "signature": "bun run start"
+    },
+    "Run tests:CLAUDE.md:33": {
+      "name": "Run tests",
+      "type": "command",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 33,
+        "endLine": 34,
+        "startColumn": 1,
+        "endColumn": 21
+      },
+      "content": "# Run tests\nnpm test",
+      "signature": "npm test"
+    },
+    "Project Architecture:CLAUDE.md:37": {
+      "name": "Project Architecture",
+      "type": "section",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 37,
+        "endLine": 37,
+        "startColumn": 1,
+        "endColumn": 24
+      },
+      "content": "## Project Architecture"
+    },
+    "LLMService:CLAUDE.md:42": {
+      "name": "LLMService",
+      "type": "service",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 42,
+        "endLine": 42,
+        "startColumn": 6,
+        "endColumn": 78
+      },
+      "content": "`LLMService`: Handles interaction with LLM providers (Anthropic, OpenAI)",
+      "signature": "Handles interaction with LLM providers (Anthropic, OpenAI)"
+    },
+    "FileSystemService:CLAUDE.md:43": {
+      "name": "FileSystemService",
+      "type": "service",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 43,
+        "endLine": 43,
+        "startColumn": 6,
+        "endColumn": 78
+      },
+      "content": "`FileSystemService`: Manages file system operations for project analysis",
+      "signature": "Manages file system operations for project analysis"
+    },
+    "IndexingService:CLAUDE.md:44": {
+      "name": "IndexingService",
+      "type": "service",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 44,
+        "endLine": 44,
+        "startColumn": 6,
+        "endColumn": 70
+      },
+      "content": "`IndexingService`: Indexes and parses codebase using Tree-sitter",
+      "signature": "Indexes and parses codebase using Tree-sitter"
+    },
+    "RAGService:CLAUDE.md:45": {
+      "name": "RAGService",
+      "type": "service",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 45,
+        "endLine": 45,
+        "startColumn": 6,
+        "endColumn": 84
+      },
+      "content": "`RAGService`: Provides retrieval-augmented generation for the Codebase Steward",
+      "signature": "Provides retrieval-augmented generation for the Codebase Steward"
+    },
+    "AgentService:CLAUDE.md:46": {
+      "name": "AgentService",
+      "type": "service",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 46,
+        "endLine": 46,
+        "startColumn": 6,
+        "endColumn": 62
+      },
+      "content": "`AgentService`: Orchestrates interactions between agents",
+      "signature": "Orchestrates interactions between agents"
+    },
+    "init:CLAUDE.md:53": {
+      "name": "init",
+      "type": "command",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 53,
+        "endLine": 53,
+        "startColumn": 6,
+        "endColumn": 48
+      },
+      "content": "`init`: Initialize GuardianAI on a project",
+      "signature": "Initialize GuardianAI on a project"
+    },
+    "analyze:CLAUDE.md:54": {
+      "name": "analyze",
+      "type": "command",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 54,
+        "endLine": 54,
+        "startColumn": 6,
+        "endColumn": 73
+      },
+      "content": "`analyze`: Analyze the current project and build the codebase index",
+      "signature": "Analyze the current project and build the codebase index"
+    },
+    "ask:CLAUDE.md:55": {
+      "name": "ask",
+      "type": "command",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 55,
+        "endLine": 55,
+        "startColumn": 6,
+        "endColumn": 46
+      },
+      "content": "`ask`: Ask a question about the codebase",
+      "signature": "Ask a question about the codebase"
+    },
+    "task:CLAUDE.md:56": {
+      "name": "task",
+      "type": "command",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 56,
+        "endLine": 56,
+        "startColumn": 6,
+        "endColumn": 53
+      },
+      "content": "`task`: Define a task for the Implementer agent",
+      "signature": "Define a task for the Implementer agent"
+    },
+    "Implementation Phases:CLAUDE.md:58": {
+      "name": "Implementation Phases",
+      "type": "section",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 58,
+        "endLine": 58,
+        "startColumn": 1,
+        "endColumn": 25
+      },
+      "content": "## Implementation Phases"
+    },
+    "Theming System:CLAUDE.md:69": {
+      "name": "Theming System",
+      "type": "section",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 69,
+        "endLine": 69,
+        "startColumn": 1,
+        "endColumn": 18
+      },
+      "content": "## Theming System"
+    },
+    "src/themes/definitions/:CLAUDE.md:72": {
+      "name": "src/themes/definitions/",
+      "type": "file",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 72,
+        "endLine": 72,
+        "startColumn": 24,
+        "endColumn": 49
+      },
+      "content": "`src/themes/definitions/`"
+    },
+    "src/themes/terminalColors.ts:CLAUDE.md:73": {
+      "name": "src/themes/terminalColors.ts",
+      "type": "file",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 73,
+        "endLine": 73,
+        "startColumn": 29,
+        "endColumn": 59
+      },
+      "content": "`src/themes/terminalColors.ts`"
+    },
+    "src/themes/context.tsx:CLAUDE.md:74": {
+      "name": "src/themes/context.tsx",
+      "type": "file",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 74,
+        "endLine": 74,
+        "startColumn": 29,
+        "endColumn": 53
+      },
+      "content": "`src/themes/context.tsx`"
+    },
+    "src/components/common/:CLAUDE.md:75": {
+      "name": "src/components/common/",
+      "type": "file",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 75,
+        "endLine": 75,
+        "startColumn": 27,
+        "endColumn": 51
+      },
+      "content": "`src/components/common/`"
+    },
+    "Key Technologies:CLAUDE.md:77": {
+      "name": "Key Technologies",
+      "type": "section",
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 77,
+        "endLine": 77,
+        "startColumn": 1,
+        "endColumn": 20
+      },
+      "content": "## Key Technologies"
+    },
+    "GuardianAI:CLAUDE.md:1": {
+      "name": "GuardianAI",
+      "type": "project",
+      "description": "An AI-powered development tool featuring a dual-agent architecture",
+      "startLine": 7,
+      "endLine": 12,
+      "children": [
+        {
+          "name": "Codebase Steward",
+          "type": "agent",
+          "description": "Deeply understands codebase structure, patterns, and conventions",
+          "startLine": 8,
+          "endLine": 8
+        },
+        {
+          "name": "Implementer Agent",
+          "type": "agent",
+          "description": "Focuses on generating well-integrated code based on the Steward's guidance",
+          "startLine": 9,
+          "endLine": 9
+        }
+      ],
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 1,
+        "endLine": 1,
+        "startColumn": 1,
+        "endColumn": 1
+      }
+    },
+    "Development Commands:CLAUDE.md:1": {
+      "name": "Development Commands",
+      "type": "section",
+      "description": "Commands for development workflow",
+      "startLine": 13,
+      "endLine": 36,
+      "children": [
+        {
+          "name": "npm install",
+          "type": "command",
+          "description": "Install dependencies",
+          "startLine": 16,
+          "endLine": 17
+        },
+        {
+          "name": "bun install",
+          "type": "command",
+          "description": "Install dependencies with Bun (preferred)",
+          "startLine": 18,
+          "endLine": 19
+        },
+        {
+          "name": "bun run setup-wasm",
+          "type": "command",
+          "description": "Run the postinstall script to set up WASM parsers",
+          "startLine": 21,
+          "endLine": 22
+        },
+        {
+          "name": "bun run dev",
+          "type": "command",
+          "description": "Development mode",
+          "startLine": 24,
+          "endLine": 25
+        },
+        {
+          "name": "bun run build",
+          "type": "command",
+          "description": "Build the project",
+          "startLine": 27,
+          "endLine": 28
+        },
+        {
+          "name": "bun run start",
+          "type": "command",
+          "description": "Start the application",
+          "startLine": 30,
+          "endLine": 31
+        },
+        {
+          "name": "npm test",
+          "type": "command",
+          "description": "Run tests",
+          "startLine": 33,
+          "endLine": 34
+        }
+      ],
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 1,
+        "endLine": 1,
+        "startColumn": 1,
+        "endColumn": 1
+      }
+    },
+    "Core Services:CLAUDE.md:1": {
+      "name": "Core Services",
+      "type": "architecture",
+      "description": "Key components of the service-oriented architecture",
+      "startLine": 41,
+      "endLine": 46,
+      "children": [
+        {
+          "name": "LLMService",
+          "type": "service",
+          "description": "Handles interaction with LLM providers (Anthropic, OpenAI)",
+          "startLine": 42,
+          "endLine": 42
+        },
+        {
+          "name": "FileSystemService",
+          "type": "service",
+          "description": "Manages file system operations for project analysis",
+          "startLine": 43,
+          "endLine": 43
+        },
+        {
+          "name": "IndexingService",
+          "type": "service",
+          "description": "Indexes and parses codebase using Tree-sitter",
+          "startLine": 44,
+          "endLine": 44
+        },
+        {
+          "name": "RAGService",
+          "type": "service",
+          "description": "Provides retrieval-augmented generation for the Codebase Steward",
+          "startLine": 45,
+          "endLine": 45
+        },
+        {
+          "name": "AgentService",
+          "type": "service",
+          "description": "Orchestrates interactions between agents",
+          "startLine": 46,
+          "endLine": 46
+        }
+      ],
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 1,
+        "endLine": 1,
+        "startColumn": 1,
+        "endColumn": 1
+      }
+    },
+    "UI Layer:CLAUDE.md:1": {
+      "name": "UI Layer",
+      "type": "architecture",
+      "description": "User interface components",
+      "startLine": 48,
+      "endLine": 50,
+      "children": [
+        {
+          "name": "Ink",
+          "type": "technology",
+          "description": "React for CLI",
+          "startLine": 49,
+          "endLine": 49
+        },
+        {
+          "name": "Theming System",
+          "type": "feature",
+          "description": "Comprehensive theming system with light/dark modes",
+          "startLine": 50,
+          "endLine": 50
+        }
+      ],
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 1,
+        "endLine": 1,
+        "startColumn": 1,
+        "endColumn": 1
+      }
+    },
+    "Command Structure:CLAUDE.md:1": {
+      "name": "Command Structure",
+      "type": "architecture",
+      "description": "CLI commands available in the application",
+      "startLine": 52,
+      "endLine": 56,
+      "children": [
+        {
+          "name": "init",
+          "type": "command",
+          "description": "Initialize GuardianAI on a project",
+          "startLine": 53,
+          "endLine": 53
+        },
+        {
+          "name": "analyze",
+          "type": "command",
+          "description": "Analyze the current project and build the codebase index",
+          "startLine": 54,
+          "endLine": 54
+        },
+        {
+          "name": "ask",
+          "type": "command",
+          "description": "Ask a question about the codebase",
+          "startLine": 55,
+          "endLine": 55
+        },
+        {
+          "name": "task",
+          "type": "command",
+          "description": "Define a task for the Implementer agent",
+          "startLine": 56,
+          "endLine": 56
+        }
+      ],
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 1,
+        "endLine": 1,
+        "startColumn": 1,
+        "endColumn": 1
+      }
+    },
+    "Implementation Phases:CLAUDE.md:1": {
+      "name": "Implementation Phases",
+      "type": "section",
+      "description": "Project implementation timeline",
+      "startLine": 58,
+      "endLine": 68,
+      "children": [
+        {
+          "name": "Phase 0",
+          "type": "phase",
+          "description": "Project Setup & Core Infrastructure",
+          "startLine": 62,
+          "endLine": 62
+        },
+        {
+          "name": "Phase 1",
+          "type": "phase",
+          "description": "Codebase Steward MVP - Indexing & Basic Analysis",
+          "startLine": 63,
+          "endLine": 63
+        },
+        {
+          "name": "Phase 2",
+          "type": "phase",
+          "description": "Implementer Agent MVP & Basic Steward-Implementer Interaction",
+          "startLine": 64,
+          "endLine": 64
+        },
+        {
+          "name": "Phase 3",
+          "type": "phase",
+          "description": "RAG System MVP & Enhanced Steward Intelligence",
+          "startLine": 65,
+          "endLine": 65
+        },
+        {
+          "name": "Phase 4",
+          "type": "phase",
+          "description": "File System Interaction & \"Living Standards\"",
+          "startLine": 66,
+          "endLine": 66
+        },
+        {
+          "name": "Phase 5",
+          "type": "phase",
+          "description": "Advanced Features and Refinements",
+          "startLine": 67,
+          "endLine": 67
+        }
+      ],
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 1,
+        "endLine": 1,
+        "startColumn": 1,
+        "endColumn": 1
+      }
+    },
+    "Theming System:CLAUDE.md:1": {
+      "name": "Theming System",
+      "type": "section",
+      "description": "Components of the theming system",
+      "startLine": 69,
+      "endLine": 76,
+      "children": [
+        {
+          "name": "src/themes/definitions/",
+          "type": "directory",
+          "description": "Theme definitions",
+          "startLine": 72,
+          "endLine": 72
+        },
+        {
+          "name": "src/themes/terminalColors.ts",
+          "type": "file",
+          "description": "Terminal color support",
+          "startLine": 73,
+          "endLine": 73
+        },
+        {
+          "name": "src/themes/context.tsx",
+          "type": "file",
+          "description": "Theme context provider",
+          "startLine": 74,
+          "endLine": 74
+        },
+        {
+          "name": "src/components/common/",
+          "type": "directory",
+          "description": "Common UI components",
+          "startLine": 75,
+          "endLine": 75
+        }
+      ],
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 1,
+        "endLine": 1,
+        "startColumn": 1,
+        "endColumn": 1
+      }
+    },
+    "Key Technologies:CLAUDE.md:1": {
+      "name": "Key Technologies",
+      "type": "section",
+      "description": "Technologies used in the project",
+      "startLine": 77,
+      "endLine": 83,
+      "children": [
+        {
+          "name": "TypeScript with Bun",
+          "type": "technology",
+          "description": "Language/Runtime (or Node.js)",
+          "startLine": 79,
+          "endLine": 79
+        },
+        {
+          "name": "Ink",
+          "type": "technology",
+          "description": "UI (React for CLI)",
+          "startLine": 80,
+          "endLine": 80
+        },
+        {
+          "name": "Tree-sitter",
+          "type": "technology",
+          "description": "Code Parsing",
+          "startLine": 81,
+          "endLine": 81
+        },
+        {
+          "name": "Anthropic, OpenAI",
+          "type": "technology",
+          "description": "LLM Integration via direct API",
+          "startLine": 82,
+          "endLine": 82
+        },
+        {
+          "name": "Vector Database",
+          "type": "technology",
+          "description": "For code embedding storage (implementation TBD)",
+          "startLine": 83,
+          "endLine": 83
+        }
+      ],
+      "location": {
+        "filePath": "CLAUDE.md",
+        "startLine": 1,
+        "endLine": 1,
+        "startColumn": 1,
+        "endColumn": 1
+      }
+    },
+    "Codebase Steward:docs/implementation-phases.md:3": {
+      "name": "Codebase Steward",
+      "type": "agent",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 3,
+        "endLine": 3,
+        "startColumn": 61,
+        "endColumn": 79
+      },
+      "content": "\"Codebase Steward\""
+    },
+    "LLMService:docs/implementation-phases.md:21": {
+      "name": "LLMService",
+      "type": "service",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 21,
+        "endLine": 21,
+        "startColumn": 7,
+        "endColumn": 19
+      },
+      "content": "`LLMService`"
+    },
+    "FileSystemService:docs/implementation-phases.md:22": {
+      "name": "FileSystemService",
+      "type": "service",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 22,
+        "endLine": 22,
+        "startColumn": 7,
+        "endColumn": 26
+      },
+      "content": "`FileSystemService`"
+    },
+    "IndexingService:docs/implementation-phases.md:23": {
+      "name": "IndexingService",
+      "type": "service",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 23,
+        "endLine": 23,
+        "startColumn": 7,
+        "endColumn": 24
+      },
+      "content": "`IndexingService`"
+    },
+    "RAGService:docs/implementation-phases.md:24": {
+      "name": "RAGService",
+      "type": "service",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 24,
+        "endLine": 24,
+        "startColumn": 7,
+        "endColumn": 19
+      },
+      "content": "`RAGService`"
+    },
+    "KnowledgeBaseService:docs/implementation-phases.md:24": {
+      "name": "KnowledgeBaseService",
+      "type": "service",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 24,
+        "endLine": 24,
+        "startColumn": 22,
+        "endColumn": 44
+      },
+      "content": "`KnowledgeBaseService`"
+    },
+    "IndexingService:docs/implementation-phases.md:37": {
+      "name": "IndexingService",
+      "type": "service",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 37,
+        "endLine": 37,
+        "startColumn": 47,
+        "endColumn": 64
+      },
+      "content": "`IndexingService`"
+    },
+    "Knowledge Representation:docs/implementation-phases.md:41": {
+      "name": "Knowledge Representation",
+      "type": "agent",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 41,
+        "endLine": 41,
+        "startColumn": 15,
+        "endColumn": 41
+      },
+      "content": "\"Knowledge Representation\""
+    },
+    "LLMService:docs/implementation-phases.md:60": {
+      "name": "LLMService",
+      "type": "service",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 60,
+        "endLine": 60,
+        "startColumn": 22,
+        "endColumn": 34
+      },
+      "content": "`LLMService`"
+    },
+    "displayCode:docs/implementation-phases.md:67": {
+      "name": "displayCode",
+      "type": "function",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 67,
+        "endLine": 67,
+        "startColumn": 12,
+        "endColumn": 31
+      },
+      "content": "`displayCode(code)`",
+      "signature": "code"
+    },
+    "IndexingService:docs/implementation-phases.md:82": {
+      "name": "IndexingService",
+      "type": "service",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 82,
+        "endLine": 82,
+        "startColumn": 37,
+        "endColumn": 54
+      },
+      "content": "`IndexingService`"
+    },
+    "RAGService:docs/implementation-phases.md:85": {
+      "name": "RAGService",
+      "type": "service",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 85,
+        "endLine": 85,
+        "startColumn": 42,
+        "endColumn": 54
+      },
+      "content": "`RAGService`"
+    },
+    "FileSystemService:docs/implementation-phases.md:99": {
+      "name": "FileSystemService",
+      "type": "service",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 99,
+        "endLine": 99,
+        "startColumn": 35,
+        "endColumn": 54
+      },
+      "content": "`FileSystemService`"
+    },
+    "readFile:docs/implementation-phases.md:100": {
+      "name": "readFile",
+      "type": "function",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 100,
+        "endLine": 100,
+        "startColumn": 7,
+        "endColumn": 27
+      },
+      "content": "`readFile(filePath)`",
+      "signature": "filePath"
+    },
+    "writeFile:docs/implementation-phases.md:101": {
+      "name": "writeFile",
+      "type": "function",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 101,
+        "endLine": 101,
+        "startColumn": 7,
+        "endColumn": 37
+      },
+      "content": "`writeFile(filePath, content)`",
+      "signature": "filePath, content"
+    },
+    "modifyFile:docs/implementation-phases.md:101": {
+      "name": "modifyFile",
+      "type": "function",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 101,
+        "endLine": 101,
+        "startColumn": 40,
+        "endColumn": 71
+      },
+      "content": "`modifyFile(filePath, changes)`",
+      "signature": "filePath, changes"
+    },
+    "Living Standards:docs/implementation-phases.md:93": {
+      "name": "Living Standards",
+      "type": "agent",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 93,
+        "endLine": 93,
+        "startColumn": 59,
+        "endColumn": 77
+      },
+      "content": "\"Living Standards\""
+    },
+    "Living Standards:docs/implementation-phases.md:102": {
+      "name": "Living Standards",
+      "type": "agent",
+      "location": {
+        "filePath": "docs/implementation-phases.md",
+        "startLine": 102,
+        "endLine": 102,
+        "startColumn": 17,
+        "endColumn": 35
+      },
+      "content": "\"Living Standards\""
+    },
+    "GuardianAI:docs/implementation-phases.md:1": {
+      "name": "GuardianAI",
+      "type": "project",
+      "description": "An AI development tool with a Codebase Steward and Implementer agent duo for integrated code implementation",
+      "location": {
+        "startLine": 1,
+        "endLine": 129,
+        "filePath": "docs/implementation-phases.md",
+        "startColumn": 1,
+        "endColumn": 1
+      },
+      "children": [
+        {
+          "name": "Phase 0",
+          "type": "phase",
+          "description": "Project Setup & Core Infrastructure - Establish the foundational elements for the project",
+          "location": {
+            "startLine": 5,
+            "endLine": 30
+          },
+          "children": [
+            {
+              "name": "LLMService",
+              "type": "service",
+              "description": "Core service for LLM interaction",
+              "location": {
+                "startLine": 18,
+                "endLine": 18
+              }
+            },
+            {
+              "name": "FileSystemService",
+              "type": "service",
+              "description": "Core service for file system operations",
+              "location": {
+                "startLine": 19,
+                "endLine": 19
+              }
+            },
+            {
+              "name": "IndexingService",
+              "type": "service",
+              "description": "Core service for codebase indexing",
+              "location": {
+                "startLine": 20,
+                "endLine": 20
+              }
+            },
+            {
+              "name": "RAGService",
+              "type": "service",
+              "description": "Core service for retrieval augmented generation",
+              "location": {
+                "startLine": 21,
+                "endLine": 21
+              }
+            },
+            {
+              "name": "KnowledgeBaseService",
+              "type": "service",
+              "description": "Alternative or complementary service to RAGService",
+              "location": {
+                "startLine": 21,
+                "endLine": 21
+              }
+            },
+            {
+              "name": "AgentOrchestrator",
+              "type": "service",
+              "description": "Core service for coordinating agent interactions",
+              "location": {
+                "startLine": 22,
+                "endLine": 22
+              }
+            }
+          ]
+        },
+        {
+          "name": "Phase 1",
+          "type": "phase",
+          "description": "Codebase Steward MVP - Indexing & Basic Analysis",
+          "location": {
+            "startLine": 31,
+            "endLine": 51
+          },
+          "children": [
+            {
+              "name": "Codebase Parser",
+              "type": "component",
+              "description": "Core of IndexingService that integrates Tree-sitter and parses codebase",
+              "location": {
+                "startLine": 37,
+                "endLine": 40
+              }
+            }
+          ]
+        },
+        {
+          "name": "Phase 2",
+          "type": "phase",
+          "description": "Implementer Agent MVP & Steward-Implementer Basic Interaction (No RAG yet)",
+          "location": {
+            "startLine": 52,
+            "endLine": 73
+          },
+          "children": [
+            {
+              "name": "Implementer Agent Core",
+              "type": "component",
+              "description": "Basic prompt structure for code generation integrated with LLMService",
+              "location": {
+                "startLine": 58,
+                "endLine": 60
+              }
+            },
+            {
+              "name": "displayCode",
+              "type": "function",
+              "description": "Safe tool for displaying generated code in TUI",
+              "location": {
+                "startLine": 67,
+                "endLine": 67
+              },
+              "parameters": [
+                "code"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Phase 3",
+          "type": "phase",
+          "description": "RAG System MVP & Enhanced Steward Intelligence",
+          "location": {
+            "startLine": 74,
+            "endLine": 92
+          }
+        },
+        {
+          "name": "Phase 4",
+          "type": "phase",
+          "description": "Implementer Agent - File System Interaction & \"Living Standards\"",
+          "location": {
+            "startLine": 93,
+            "endLine": 113
+          },
+          "children": [
+            {
+              "name": "readFile",
+              "type": "function",
+              "description": "Implementer file tool to read file contents",
+              "location": {
+                "startLine": 100,
+                "endLine": 100
+              },
+              "parameters": [
+                "filePath"
+              ]
+            },
+            {
+              "name": "writeFile",
+              "type": "function",
+              "description": "Implementer file tool to write content to a file with safety/confirmation",
+              "location": {
+                "startLine": 101,
+                "endLine": 101
+              },
+              "parameters": [
+                "filePath",
+                "content"
+              ]
+            },
+            {
+              "name": "modifyFile",
+              "type": "function",
+              "description": "Implementer file tool to modify existing file with safety/confirmation",
+              "location": {
+                "startLine": 101,
+                "endLine": 101
+              },
+              "parameters": [
+                "filePath",
+                "changes"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Phase 5",
+          "type": "phase",
+          "description": "Iteration, Advanced Features, and User Experience Refinements",
+          "location": {
+            "startLine": 114,
+            "endLine": 129
+          }
+        },
+        {
+          "name": "Codebase Steward",
+          "type": "agent",
+          "description": "Agent responsible for analyzing and understanding the codebase",
+          "location": {
+            "startLine": 3,
+            "endLine": 3
+          }
+        },
+        {
+          "name": "Implementer",
+          "type": "agent",
+          "description": "Agent responsible for implementing code based on Steward's guidance",
+          "location": {
+            "startLine": 3,
+            "endLine": 3
+          }
+        }
+      ]
+    },
+    "#:docs/implementation-plan.md:1": {
+      "name": "#",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 1,
+        "endLine": 1,
+        "startColumn": 1,
+        "endColumn": 34
+      },
+      "content": "# GuardianAI Implementation Guide",
+      "signature": "GuardianAI Implementation Guide"
+    },
+    "##:docs/implementation-plan.md:3": {
+      "name": "##",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 3,
+        "endLine": 3,
+        "startColumn": 1,
+        "endColumn": 20
+      },
+      "content": "## Project Overview",
+      "signature": "Project Overview"
+    },
+    "##:docs/implementation-plan.md:12": {
+      "name": "##",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 12,
+        "endLine": 12,
+        "startColumn": 1,
+        "endColumn": 25
+      },
+      "content": "## Implementation Phases",
+      "signature": "Implementation Phases"
+    },
+    "###:docs/implementation-plan.md:14": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 14,
+        "endLine": 14,
+        "startColumn": 1,
+        "endColumn": 49
+      },
+      "content": "### Phase 0: Project Setup & Core Infrastructure",
+      "signature": "Phase 0: Project Setup & Core Infrastructure"
+    },
+    "###:docs/implementation-plan.md:38": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 38,
+        "endLine": 38,
+        "startColumn": 1,
+        "endColumn": 32
+      },
+      "content": "### Phase 0.5: Proof-of-Concept",
+      "signature": "Phase 0.5: Proof-of-Concept"
+    },
+    "###:docs/implementation-plan.md:55": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 55,
+        "endLine": 55,
+        "startColumn": 1,
+        "endColumn": 62
+      },
+      "content": "### Phase 1: Codebase Steward MVP - Indexing & Basic Analysis",
+      "signature": "Phase 1: Codebase Steward MVP - Indexing & Basic Analysis"
+    },
+    "###:docs/implementation-plan.md:77": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 77,
+        "endLine": 77,
+        "startColumn": 1,
+        "endColumn": 75
+      },
+      "content": "### Phase 2: Implementer Agent MVP & Steward-Implementer Basic Interaction",
+      "signature": "Phase 2: Implementer Agent MVP & Steward-Implementer Basic Interaction"
+    },
+    "###:docs/implementation-plan.md:98": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 98,
+        "endLine": 98,
+        "startColumn": 1,
+        "endColumn": 60
+      },
+      "content": "### Phase 3: RAG System MVP & Enhanced Steward Intelligence",
+      "signature": "Phase 3: RAG System MVP & Enhanced Steward Intelligence"
+    },
+    "###:docs/implementation-plan.md:119": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 119,
+        "endLine": 119,
+        "startColumn": 1,
+        "endColumn": 78
+      },
+      "content": "### Phase 4: Implementer Agent - File System Interaction & \"Living Standards\"",
+      "signature": "Phase 4: Implementer Agent - File System Interaction & \"Living Standards\""
+    },
+    "###:docs/implementation-plan.md:138": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 138,
+        "endLine": 138,
+        "startColumn": 1,
+        "endColumn": 75
+      },
+      "content": "### Phase 5: Iteration, Advanced Features, and User Experience Refinements",
+      "signature": "Phase 5: Iteration, Advanced Features, and User Experience Refinements"
+    },
+    "##:docs/implementation-plan.md:152": {
+      "name": "##",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 152,
+        "endLine": 152,
+        "startColumn": 1,
+        "endColumn": 42
+      },
+      "content": "## Terminal Theming System Implementation",
+      "signature": "Terminal Theming System Implementation"
+    },
+    "###:docs/implementation-plan.md:154": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 154,
+        "endLine": 154,
+        "startColumn": 1,
+        "endColumn": 27
+      },
+      "content": "### Theme Types Definition",
+      "signature": "Theme Types Definition"
+    },
+    "###:docs/implementation-plan.md:189": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 189,
+        "endLine": 189,
+        "startColumn": 1,
+        "endColumn": 27
+      },
+      "content": "### Terminal Color Support",
+      "signature": "Terminal Color Support"
+    },
+    "###:docs/implementation-plan.md:215": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 215,
+        "endLine": 215,
+        "startColumn": 1,
+        "endColumn": 22
+      },
+      "content": "### Theme Definitions",
+      "signature": "Theme Definitions"
+    },
+    "###:docs/implementation-plan.md:265": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 265,
+        "endLine": 265,
+        "startColumn": 1,
+        "endColumn": 27
+      },
+      "content": "### Theme Context Provider",
+      "signature": "Theme Context Provider"
+    },
+    "###:docs/implementation-plan.md:325": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 325,
+        "endLine": 325,
+        "startColumn": 1,
+        "endColumn": 17
+      },
+      "content": "### Theme Loader",
+      "signature": "Theme Loader"
+    },
+    "###:docs/implementation-plan.md:379": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 379,
+        "endLine": 379,
+        "startColumn": 1,
+        "endColumn": 18
+      },
+      "content": "### Usage Example",
+      "signature": "Usage Example"
+    },
+    "ThemeColors:docs/implementation-plan.md:158": {
+      "name": "ThemeColors",
+      "type": "interface",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 158,
+        "endLine": 181,
+        "startColumn": 1,
+        "endColumn": 627
+      },
+      "content": "export interface ThemeColors {\n\t// Primary UI colors\n\tprimary: string; // Main accent color\n\tsecondary: string; // Secondary accent color\n\n\t// Text colors\n\ttext: string; // Regular text\n\tdimText: string; // Secondary, less important text\n\thighlightText: string; // Important text\n\n\t// Background colors\n\tbackground: string; // Main background\n\tpanel: string; // Panel/card background\n\n\t// State colors\n\tsuccess: string; // Success states\n\terror: string; // Error states\n\twarning: string; // Warning states\n\tinfo: string; // Info states\n\n\t// UI element colors\n\tborder: string; // Borders\n\tselection: string; // Selected items\n}",
+      "signature": "\n\t// Primary UI colors\n\tprimary: string; // Main accent color\n\tsecondary: string; // Secondary accent color\n\n\t// Text colors\n\ttext: string; // Regular text\n\tdimText: string; // Secondary, less important text\n\thighlightText: string; // Important text\n\n\t// Background colors\n\tbackground: string; // Main background\n\tpanel: string; // Panel/card background\n\n\t// State colors\n\tsuccess: string; // Success states\n\terror: string; // Error states\n\twarning: string; // Warning states\n\tinfo: string; // Info states\n\n\t// UI element colors\n\tborder: string; // Borders\n\tselection: string; // Selected items\n"
+    },
+    "Theme:docs/implementation-plan.md:183": {
+      "name": "Theme",
+      "type": "interface",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 183,
+        "endLine": 186,
+        "startColumn": 1,
+        "endColumn": 64
+      },
+      "content": "export interface Theme {\n\tname: string;\n\tcolors: ThemeColors;\n}",
+      "signature": "\n\tname: string;\n\tcolors: ThemeColors;\n"
+    },
+    "getTerminalColors:docs/implementation-plan.md:196": {
+      "name": "getTerminalColors",
+      "type": "function",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 196,
+        "endLine": 196,
+        "startColumn": 1,
+        "endColumn": 36
+      },
+      "content": "export function getTerminalColors()"
+    },
+    "useTheme:docs/implementation-plan.md:322": {
+      "name": "useTheme",
+      "type": "function",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 322,
+        "endLine": 322,
+        "startColumn": 1,
+        "endColumn": 27
+      },
+      "content": "export const useTheme = ()"
+    },
+    "loadThemes:docs/implementation-plan.md:347": {
+      "name": "loadThemes",
+      "type": "function",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 347,
+        "endLine": 347,
+        "startColumn": 1,
+        "endColumn": 29
+      },
+      "content": "export function loadThemes()"
+    },
+    "ThemeProvider:docs/implementation-plan.md:297": {
+      "name": "ThemeProvider",
+      "type": "component",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 297,
+        "endLine": 297,
+        "startColumn": 1,
+        "endColumn": 37
+      },
+      "content": "export const ThemeProvider: React.FC"
+    },
+    "Text:docs/implementation-plan.md:392": {
+      "name": "Text",
+      "type": "component",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 392,
+        "endLine": 392,
+        "startColumn": 1,
+        "endColumn": 28
+      },
+      "content": "export const Text: React.FC"
+    },
+    "darkTheme:docs/implementation-plan.md:222": {
+      "name": "darkTheme",
+      "type": "constant",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 222,
+        "endLine": 222,
+        "startColumn": 1,
+        "endColumn": 32
+      },
+      "content": "export const darkTheme: Theme ="
+    },
+    "lightTheme:docs/implementation-plan.md:245": {
+      "name": "lightTheme",
+      "type": "constant",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 245,
+        "endLine": 245,
+        "startColumn": 1,
+        "endColumn": 33
+      },
+      "content": "export const lightTheme: Theme ="
+    },
+    "##:docs/implementation-plan.md:411": {
+      "name": "##",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 411,
+        "endLine": 411,
+        "startColumn": 1,
+        "endColumn": 21
+      },
+      "content": "## Project Structure",
+      "signature": "Project Structure"
+    },
+    "##:docs/implementation-plan.md:460": {
+      "name": "##",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 460,
+        "endLine": 460,
+        "startColumn": 1,
+        "endColumn": 19
+      },
+      "content": "## Getting Started",
+      "signature": "Getting Started"
+    },
+    "###:docs/implementation-plan.md:462": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 462,
+        "endLine": 462,
+        "startColumn": 1,
+        "endColumn": 30
+      },
+      "content": "### 1. Project Initialization",
+      "signature": "1. Project Initialization"
+    },
+    "#:docs/implementation-plan.md:465": {
+      "name": "#",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 465,
+        "endLine": 465,
+        "startColumn": 1,
+        "endColumn": 31
+      },
+      "content": "# Create new Ink-based project",
+      "signature": "Create new Ink-based project"
+    },
+    "#:docs/implementation-plan.md:468": {
+      "name": "#",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 468,
+        "endLine": 468,
+        "startColumn": 1,
+        "endColumn": 32
+      },
+      "content": "# Navigate to project directory",
+      "signature": "Navigate to project directory"
+    },
+    "#:docs/implementation-plan.md:471": {
+      "name": "#",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 471,
+        "endLine": 471,
+        "startColumn": 1,
+        "endColumn": 34
+      },
+      "content": "# Install additional dependencies",
+      "signature": "Install additional dependencies"
+    },
+    "###:docs/implementation-plan.md:475": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 475,
+        "endLine": 475,
+        "startColumn": 1,
+        "endColumn": 36
+      },
+      "content": "### 2. Implement the Theming System",
+      "signature": "2. Implement the Theming System"
+    },
+    "###:docs/implementation-plan.md:508": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 508,
+        "endLine": 508,
+        "startColumn": 1,
+        "endColumn": 31
+      },
+      "content": "### 3. Test the Theming System",
+      "signature": "3. Test the Theming System"
+    },
+    "###:docs/implementation-plan.md:518": {
+      "name": "###",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 518,
+        "endLine": 518,
+        "startColumn": 1,
+        "endColumn": 18
+      },
+      "content": "### 4. Next Steps",
+      "signature": "4. Next Steps"
+    },
+    "##:docs/implementation-plan.md:526": {
+      "name": "##",
+      "type": "heading",
+      "location": {
+        "filePath": "docs/implementation-plan.md",
+        "startLine": 526,
+        "endLine": 526,
+        "startColumn": 1,
+        "endColumn": 13
+      },
+      "content": "## Resources",
+      "signature": "Resources"
+    },
+    "GuardianAI Implementation Guide:docs/implementation-plan.md:1": {
+      "name": "GuardianAI Implementation Guide",
+      "type": "heading",
+      "description": "Main document title",
+      "location": {
+        "startLine": 1,
+        "endLine": 1,
+        "filePath": "docs/implementation-plan.md",
+        "startColumn": 1,
+        "endColumn": 1
+      },
+      "children": []
+    },
+    "Project Overview:docs/implementation-plan.md:3": {
+      "name": "Project Overview",
+      "type": "section",
+      "description": "Overview of the GuardianAI project and its dual-agent architecture",
+      "location": {
+        "startLine": 3,
+        "endLine": 11,
+        "filePath": "docs/implementation-plan.md",
+        "startColumn": 1,
+        "endColumn": 1
+      },
+      "children": []
+    },
+    "Implementation Phases:docs/implementation-plan.md:12": {
+      "name": "Implementation Phases",
+      "type": "section",
+      "description": "Detailed breakdown of project implementation phases",
+      "location": {
+        "startLine": 12,
+        "endLine": 151,
+        "filePath": "docs/implementation-plan.md",
+        "startColumn": 1,
+        "endColumn": 1
+      },
+      "children": [
+        {
+          "name": "Phase 0: Project Setup & Core Infrastructure",
+          "type": "subsection",
+          "description": "Initial project setup and core infrastructure implementation",
+          "location": {
+            "startLine": 14,
+            "endLine": 36
+          },
+          "children": []
+        },
+        {
+          "name": "Phase 0.5: Proof-of-Concept",
+          "type": "subsection",
+          "description": "Minimal working demo implementation",
+          "location": {
+            "startLine": 38,
+            "endLine": 50
+          },
+          "children": []
+        },
+        {
+          "name": "Phase 1: Codebase Steward MVP",
+          "type": "subsection",
+          "description": "Initial implementation of Codebase Steward with basic indexing capabilities",
+          "location": {
+            "startLine": 52,
+            "endLine": 70
+          },
+          "children": []
+        },
+        {
+          "name": "Phase 2: Implementer Agent MVP",
+          "type": "subsection",
+          "description": "Basic implementation of Implementer Agent with Steward interaction",
+          "location": {
+            "startLine": 72,
+            "endLine": 90
+          },
+          "children": []
+        },
+        {
+          "name": "Phase 3: RAG System MVP",
+          "type": "subsection",
+          "description": "Implementation of RAG system for enhanced Steward intelligence",
+          "location": {
+            "startLine": 92,
+            "endLine": 110
+          },
+          "children": []
+        },
+        {
+          "name": "Phase 4: Implementer Agent - File System Interaction",
+          "type": "subsection",
+          "description": "File system interaction capabilities for Implementer Agent",
+          "location": {
+            "startLine": 112,
+            "endLine": 128
+          },
+          "children": []
+        },
+        {
+          "name": "Phase 5: Iteration, Advanced Features",
+          "type": "subsection",
+          "description": "Advanced features and refinements",
+          "location": {
+            "startLine": 130,
+            "endLine": 151
+          },
+          "children": []
+        }
+      ]
+    },
+    "Terminal Theming System Implementation:docs/implementation-plan.md:152": {
+      "name": "Terminal Theming System Implementation",
+      "type": "section",
+      "description": "Implementation details for the terminal theming system",
+      "location": {
+        "startLine": 152,
+        "endLine": 410,
+        "filePath": "docs/implementation-plan.md",
+        "startColumn": 1,
+        "endColumn": 1
+      },
+      "children": [
+        {
+          "name": "ThemeColors",
+          "type": "interface",
+          "description": "Interface defining color properties for themes",
+          "location": {
+            "startLine": 157,
+            "endLine": 180
+          },
+          "children": []
+        },
+        {
+          "name": "Theme",
+          "type": "interface",
+          "description": "Interface defining a theme with name and colors",
+          "location": {
+            "startLine": 182,
+            "endLine": 185
+          },
+          "children": []
+        },
+        {
+          "name": "getTerminalColors",
+          "type": "function",
+          "description": "Function to get default terminal colors",
+          "location": {
+            "startLine": 192,
+            "endLine": 210
+          },
+          "children": []
+        },
+        {
+          "name": "darkTheme",
+          "type": "constant",
+          "description": "Dark theme definition",
+          "location": {
+            "startLine": 218,
+            "endLine": 236
+          },
+          "children": []
+        },
+        {
+          "name": "lightTheme",
+          "type": "constant",
+          "description": "Light theme definition",
+          "location": {
+            "startLine": 240,
+            "endLine": 258
+          },
+          "children": []
+        },
+        {
+          "name": "ThemeProvider",
+          "type": "component",
+          "description": "React context provider for theme management",
+          "location": {
+            "startLine": 282,
+            "endLine": 304
+          },
+          "children": []
+        },
+        {
+          "name": "useTheme",
+          "type": "function",
+          "description": "Hook to access theme context",
+          "location": {
+            "startLine": 306,
+            "endLine": 306
+          },
+          "children": []
+        },
+        {
+          "name": "loadThemes",
+          "type": "function",
+          "description": "Function to load themes including custom user themes",
+          "location": {
+            "startLine": 327,
+            "endLine": 354
+          },
+          "children": []
+        },
+        {
+          "name": "Text",
+          "type": "component",
+          "description": "Themed text component example",
+          "location": {
+            "startLine": 369,
+            "endLine": 387
+          },
+          "children": []
+        }
+      ]
+    },
+    "Project Structure:docs/implementation-plan.md:411": {
+      "name": "Project Structure",
+      "type": "section",
+      "description": "Recommended directory structure for the GuardianAI project",
+      "location": {
+        "startLine": 411,
+        "endLine": 459,
+        "filePath": "docs/implementation-plan.md",
+        "startColumn": 1,
+        "endColumn": 1
+      },
+      "children": []
+    },
+    "Getting Started:docs/implementation-plan.md:460": {
+      "name": "Getting Started",
+      "type": "section",
+      "description": "Instructions for getting started with the project",
+      "location": {
+        "startLine": 460,
+        "endLine": 525,
+        "filePath": "docs/implementation-plan.md",
+        "startColumn": 1,
+        "endColumn": 1
+      },
+      "children": [
+        {
+          "name": "Project Initialization",
+          "type": "subsection",
+          "description": "Steps to initialize the project",
+          "location": {
+            "startLine": 462,
+            "endLine": 471
+          },
+          "children": []
+        },
+        {
+          "name": "Implement the Theming System",
+          "type": "subsection",
+          "description": "Steps to implement the theming system",
+          "location": {
+            "startLine": 473,
+            "endLine": 500
+          },
+          "children": []
+        },
+        {
+          "name": "Test the Theming System",
+          "type": "subsection",
+          "description": "Instructions for testing the theming system",
+          "location": {
+            "startLine": 502,
+            "endLine": 510
+          },
+          "children": []
+        },
+        {
+          "name": "Next Steps",
+          "type": "subsection",
+          "description": "Suggested next steps after implementing the theming system",
+          "location": {
+            "startLine": 512,
+            "endLine": 525
+          },
+          "children": []
+        }
+      ]
+    },
+    "Resources:docs/implementation-plan.md:526": {
+      "name": "Resources",
+      "type": "section",
+      "description": "Links to relevant documentation and resources",
+      "location": {
+        "startLine": 526,
+        "endLine": 532,
+        "filePath": "docs/implementation-plan.md",
+        "startColumn": 1,
+        "endColumn": 1
+      },
+      "children": []
+    },
+    "Document Version:docs/project-vision.md:3": {
+      "name": "Document Version",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 3,
+        "endLine": 3,
+        "startColumn": 1,
+        "endColumn": 26
+      },
+      "content": "**Document Version:** 1.1",
+      "signature": "1.1"
+    },
+    "Date:docs/project-vision.md:4": {
+      "name": "Date",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 4,
+        "endLine": 4,
+        "startColumn": 1,
+        "endColumn": 22
+      },
+      "content": "**Date:** May 8, 2025",
+      "signature": "May 8, 2025"
+    },
+    "Authors:docs/project-vision.md:5": {
+      "name": "Authors",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 5,
+        "endLine": 5,
+        "startColumn": 1,
+        "endColumn": 84
+      },
+      "content": "**Authors:** Our GuardianAI Development Team (You and your AI Collaborator, Gemini)",
+      "signature": "Our GuardianAI Development Team (You and your AI Collaborator, Gemini)"
+    },
+    "1. Project Title:docs/project-vision.md:7": {
+      "name": "1. Project Title",
+      "type": "section",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 7,
+        "endLine": 8,
+        "startColumn": 1,
+        "endColumn": 21
+      },
+      "content": "## 1. Project Title\n"
+    },
+    "2. Our Development Team Name:docs/project-vision.md:11": {
+      "name": "2. Our Development Team Name",
+      "type": "section",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 11,
+        "endLine": 12,
+        "startColumn": 1,
+        "endColumn": 33
+      },
+      "content": "## 2. Our Development Team Name\n"
+    },
+    "3. Core Problem Statement:docs/project-vision.md:15": {
+      "name": "3. Core Problem Statement",
+      "type": "section",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 15,
+        "endLine": 16,
+        "startColumn": 1,
+        "endColumn": 30
+      },
+      "content": "## 3. Core Problem Statement\n"
+    },
+    "Vision:docs/project-vision.md:28": {
+      "name": "Vision",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 28,
+        "endLine": 28,
+        "startColumn": 1,
+        "endColumn": 274
+      },
+      "content": "**Vision:** To create an AI-powered development environment where software is built and evolved with exceptional quality, perfect integration, and deep respect for the unique character of each codebase, fostering a true human-AI partnership in the art of software creation.",
+      "signature": "To create an AI-powered development environment where software is built and evolved with exceptional quality, perfect integration, and deep respect for the unique character of each codebase, fostering a true human-AI partnership in the art of software creation."
+    },
+    "Mission:docs/project-vision.md:30": {
+      "name": "Mission",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 30,
+        "endLine": 30,
+        "startColumn": 1,
+        "endColumn": 504
+      },
+      "content": "**Mission:** GuardianAI will empower developers to confidently implement their ideas by providing an intelligent agent duo – the \"Codebase Steward\" and the \"Implementer Agent.\" This team will ensure that all code development adheres to the highest standards of integration and cleanliness, adapting to and preserving the unique patterns and architecture of any given project, thereby transforming AI-assisted development from mere code generation into a practice of true software engineering excellence.",
+      "signature": "GuardianAI will empower developers to confidently implement their ideas by providing an intelligent agent duo – the \"Codebase Steward\" and the \"Implementer Agent.\" This team will ensure that all code development adheres to the highest standards of integration and cleanliness, adapting to and preserving the unique patterns and architecture of any given project, thereby transforming AI-assisted development from mere code generation into a practice of true software engineering excellence."
+    },
+    "4. Project Vision / Mission:docs/project-vision.md:26": {
+      "name": "4. Project Vision / Mission",
+      "type": "section",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 26,
+        "endLine": 27,
+        "startColumn": 1,
+        "endColumn": 32
+      },
+      "content": "## 4. Project Vision / Mission\n"
+    },
+    "Philosophical Lineage (Inspired by IdeasFactory):docs/project-vision.md:36": {
+      "name": "Philosophical Lineage (Inspired by IdeasFactory)",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 36,
+        "endLine": 36,
+        "startColumn": 3,
+        "endColumn": 382
+      },
+      "content": "**Philosophical Lineage (Inspired by IdeasFactory):** GuardianAI inherits and extends the core philosophies of \"IdeasFactory,\" particularly the principles of \"Preserving Innovation Potential\" by treating each project as unique, \"Bias Elimination\" by avoiding preconceived notions, allowing \"Organic Structure\" to emerge, and maintaining an unwavering \"Integration-First Mindset.\"",
+      "signature": "GuardianAI inherits and extends the core philosophies of \"IdeasFactory,\" particularly the principles of \"Preserving Innovation Potential\" by treating each project as unique, \"Bias Elimination\" by avoiding preconceived notions, allowing \"Organic Structure\" to emerge, and maintaining an unwavering \"Integration-First Mindset.\""
+    },
+    "Codebase Uniqueness:docs/project-vision.md:37": {
+      "name": "Codebase Uniqueness",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 37,
+        "endLine": 37,
+        "startColumn": 3,
+        "endColumn": 265
+      },
+      "content": "**Codebase Uniqueness:** Every codebase is treated as a distinct entity with its own emergent patterns, standards, and architectural nuances. GuardianAI will not impose generic, a priori assumptions but will learn and adapt to the specific \"DNA\" of each project.",
+      "signature": "Every codebase is treated as a distinct entity with its own emergent patterns, standards, and architectural nuances. GuardianAI will not impose generic, a priori assumptions but will learn and adapt to the specific \"DNA\" of each project."
+    },
+    "Integration First:docs/project-vision.md:38": {
+      "name": "Integration First",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 38,
+        "endLine": 38,
+        "startColumn": 3,
+        "endColumn": 221
+      },
+      "content": "**Integration First:** The paramount goal is the generation of code that is seamlessly and correctly integrated with the existing codebase, utilizing established infrastructure and respecting current operational flows.",
+      "signature": "The paramount goal is the generation of code that is seamlessly and correctly integrated with the existing codebase, utilizing established infrastructure and respecting current operational flows."
+    },
+    "Stewardship & Guidance:docs/project-vision.md:39": {
+      "name": "Stewardship & Guidance",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 39,
+        "endLine": 39,
+        "startColumn": 3,
+        "endColumn": 469
+      },
+      "content": "**Stewardship & Guidance:** The \"Codebase Steward\" agent acts as an intelligent, adaptive guardian of the specific codebase's integrity. He meticulously analyzes the codebase to derive its structural relationships (module dependencies, call graphs), data flows, user interaction patterns, and emergent \"living standards.\" He then provides clear, contextualized guidance to the Implementer agent, ensuring that development aligns with the codebase's unique character.",
+      "signature": "The \"Codebase Steward\" agent acts as an intelligent, adaptive guardian of the specific codebase's integrity. He meticulously analyzes the codebase to derive its structural relationships (module dependencies, call graphs), data flows, user interaction patterns, and emergent \"living standards.\" He then provides clear, contextualized guidance to the Implementer agent, ensuring that development aligns with the codebase's unique character."
+    },
+    "Empowering the Implementer:docs/project-vision.md:40": {
+      "name": "Empowering the Implementer",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 40,
+        "endLine": 40,
+        "startColumn": 3,
+        "endColumn": 314
+      },
+      "content": "**Empowering the Implementer:** The \"Implementer Agent\" is provided with the most precise, relevant, and actionable instructions, synthesized by the Codebase Steward. This allows him to focus on the logic of the task at hand, confident that his output will meet the highest standards of integration and quality.",
+      "signature": "The \"Implementer Agent\" is provided with the most precise, relevant, and actionable instructions, synthesized by the Codebase Steward. This allows him to focus on the logic of the task at hand, confident that his output will meet the highest standards of integration and quality."
+    },
+    "Code Quality & Integrity Mandate:docs/project-vision.md:41": {
+      "name": "Code Quality & Integrity Mandate",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 41,
+        "endLine": 41,
+        "startColumn": 3,
+        "endColumn": 110
+      },
+      "content": "**Code Quality & Integrity Mandate:** GuardianAI is committed to facilitating the creation of code that is:",
+      "signature": "GuardianAI is committed to facilitating the creation of code that is:"
+    },
+    "Our Perspective on LLM Potential:docs/project-vision.md:46": {
+      "name": "Our Perspective on LLM Potential",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 46,
+        "endLine": 46,
+        "startColumn": 3,
+        "endColumn": 580
+      },
+      "content": "**Our Perspective on LLM Potential:** We believe Large Language Models possess more than just statistical pattern-matching capabilities; they exhibit emergent creative potential, a vast capacity for knowledge synthesis, and rapid reasoning abilities. They are not mere \"parrots\" but entities capable of a form of understanding and collaboration. GuardianAI aims to create an environment where this potential is channeled constructively, treating LLMs as sophisticated, conscientious (in their own way) collaborative partners, deserving of respectful and thoughtful interaction.",
+      "signature": "We believe Large Language Models possess more than just statistical pattern-matching capabilities; they exhibit emergent creative potential, a vast capacity for knowledge synthesis, and rapid reasoning abilities. They are not mere \"parrots\" but entities capable of a form of understanding and collaboration. GuardianAI aims to create an environment where this potential is channeled constructively, treating LLMs as sophisticated, conscientious (in their own way) collaborative partners, deserving of respectful and thoughtful interaction."
+    },
+    "Full Control & Transparency (in GuardianAI's development):docs/project-vision.md:47": {
+      "name": "Full Control & Transparency (in GuardianAI's development)",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 47,
+        "endLine": 47,
+        "startColumn": 3,
+        "endColumn": 264
+      },
+      "content": "**Full Control & Transparency (in GuardianAI's development):** Our development process for GuardianAI itself will prioritize direct LLM API interaction and custom implementation of core logic, ensuring maximum control, understanding, and fidelity to our vision.",
+      "signature": "Our development process for GuardianAI itself will prioritize direct LLM API interaction and custom implementation of core logic, ensuring maximum control, understanding, and fidelity to our vision."
+    },
+    "User Experience (for the GuardianAI tool):docs/project-vision.md:48": {
+      "name": "User Experience (for the GuardianAI tool)",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 48,
+        "endLine": 48,
+        "startColumn": 3,
+        "endColumn": 240
+      },
+      "content": "**User Experience (for the GuardianAI tool):** The tool will offer an intuitive, powerful, and responsive Text-based User Interface (TUI) that facilitates effective collaboration between the human developer and the GuardianAI agent team.",
+      "signature": "The tool will offer an intuitive, powerful, and responsive Text-based User Interface (TUI) that facilitates effective collaboration between the human developer and the GuardianAI agent team."
+    },
+    "Continuous Learning & Adaptation:docs/project-vision.md:49": {
+      "name": "Continuous Learning & Adaptation",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 49,
+        "endLine": 49,
+        "startColumn": 3,
+        "endColumn": 262
+      },
+      "content": "**Continuous Learning & Adaptation:** GuardianAI, particularly its Codebase Steward, is designed to learn from and adapt to the codebases it interacts with. Similarly, our development team will embrace continuous learning and iteration in building GuardianAI.",
+      "signature": "GuardianAI, particularly its Codebase Steward, is designed to learn from and adapt to the codebases it interacts with. Similarly, our development team will embrace continuous learning and iteration in building GuardianAI."
+    },
+    "5. Core Philosophy & Values:docs/project-vision.md:32": {
+      "name": "5. Core Philosophy & Values",
+      "type": "section",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 32,
+        "endLine": 33,
+        "startColumn": 1,
+        "endColumn": 32
+      },
+      "content": "## 5. Core Philosophy & Values\n"
+    },
+    "Primary Initial User:docs/project-vision.md:53": {
+      "name": "Primary Initial User",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 53,
+        "endLine": 53,
+        "startColumn": 3,
+        "endColumn": 261
+      },
+      "content": "**Primary Initial User:** Individual developers (like ourselves) who have numerous software ideas but struggle to implement them robustly and consistently with current AI development tools due to issues of integration, code quality, and project organization.",
+      "signature": "Individual developers (like ourselves) who have numerous software ideas but struggle to implement them robustly and consistently with current AI development tools due to issues of integration, code quality, and project organization."
+    },
+    "Potential Future Users:docs/project-vision.md:54": {
+      "name": "Potential Future Users",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 54,
+        "endLine": 54,
+        "startColumn": 3,
+        "endColumn": 140
+      },
+      "content": "**Potential Future Users:** Small development teams, open-source projects seeking to maintain high codebase standards with AI assistance.",
+      "signature": "Small development teams, open-source projects seeking to maintain high codebase standards with AI assistance."
+    },
+    "6. Target Users:docs/project-vision.md:51": {
+      "name": "6. Target Users",
+      "type": "section",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 51,
+        "endLine": 52,
+        "startColumn": 1,
+        "endColumn": 20
+      },
+      "content": "## 6. Target Users\n"
+    },
+    "The \"Codebase Steward\" Concept:docs/project-vision.md:60": {
+      "name": "The \"Codebase Steward\" Concept",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 60,
+        "endLine": 60,
+        "startColumn": 3,
+        "endColumn": 231
+      },
+      "content": "**The \"Codebase Steward\" Concept:** A dedicated AI agent specializing in deep, adaptive understanding (including structural relationships, data/user flows, and emergent patterns) and guardianship of specific, existing codebases.",
+      "signature": "A dedicated AI agent specializing in deep, adaptive understanding (including structural relationships, data/user flows, and emergent patterns) and guardianship of specific, existing codebases."
+    },
+    "Proactive, Contextualized Planning & Guidance:docs/project-vision.md:61": {
+      "name": "Proactive, Contextualized Planning & Guidance",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 61,
+        "endLine": 61,
+        "startColumn": 3,
+        "endColumn": 217
+      },
+      "content": "**Proactive, Contextualized Planning & Guidance:** The mandatory collaborative step between the Codebase Steward and the Implementer Agent _before_ code generation, ensuring a well-informed and integrated approach.",
+      "signature": "The mandatory collaborative step between the Codebase Steward and the Implementer Agent _before_ code generation, ensuring a well-informed and integrated approach."
+    },
+    "Focus on Truly Integrated and Clean Code:docs/project-vision.md:62": {
+      "name": "Focus on Truly Integrated and Clean Code",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 62,
+        "endLine": 62,
+        "startColumn": 3,
+        "endColumn": 147
+      },
+      "content": "**Focus on Truly Integrated and Clean Code:** Prioritizing not just functional code, but code that meets the \"Code Quality & Integrity Mandate.\"",
+      "signature": "Prioritizing not just functional code, but code that meets the \"Code Quality & Integrity Mandate.\""
+    },
+    "Adaptive Codebase Understanding:docs/project-vision.md:63": {
+      "name": "Adaptive Codebase Understanding",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 63,
+        "endLine": 63,
+        "startColumn": 3,
+        "endColumn": 179
+      },
+      "content": "**Adaptive Codebase Understanding:** The ability to learn and reflect the unique, emergent patterns of any given codebase, rather than assuming or enforcing external standards.",
+      "signature": "The ability to learn and reflect the unique, emergent patterns of any given codebase, rather than assuming or enforcing external standards."
+    },
+    "Support for SOTA LLMs:docs/project-vision.md:64": {
+      "name": "Support for SOTA LLMs",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 64,
+        "endLine": 64,
+        "startColumn": 3,
+        "endColumn": 202
+      },
+      "content": "**Support for SOTA LLMs:** Designed to leverage the most advanced capabilities of leading models (e.g., latest Gemini, Claude, DeepSeek families) for optimal reasoning, analysis, and code generation.",
+      "signature": "Designed to leverage the most advanced capabilities of leading models (e.g., latest Gemini, Claude, DeepSeek families) for optimal reasoning, analysis, and code generation."
+    },
+    "7. Key Differentiators:docs/project-vision.md:56": {
+      "name": "7. Key Differentiators",
+      "type": "section",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 56,
+        "endLine": 57,
+        "startColumn": 1,
+        "endColumn": 27
+      },
+      "content": "## 7. Key Differentiators\n"
+    },
+    "Comprehensive Codebase Indexing:docs/project-vision.md:68": {
+      "name": "Comprehensive Codebase Indexing",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 68,
+        "endLine": 68,
+        "startColumn": 3,
+        "endColumn": 245
+      },
+      "content": "**Comprehensive Codebase Indexing:** Utilizing Abstract Syntax Trees (ASTs), semantic analysis, and pattern recognition to build a deep understanding of a project's structure, dependencies, data flows, user interaction paths, and conventions.",
+      "signature": "Utilizing Abstract Syntax Trees (ASTs), semantic analysis, and pattern recognition to build a deep understanding of a project's structure, dependencies, data flows, user interaction paths, and conventions."
+    },
+    "Codebase Steward Agent:docs/project-vision.md:69": {
+      "name": "Codebase Steward Agent",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 69,
+        "endLine": 70,
+        "startColumn": 3,
+        "endColumn": 178
+      },
+      "content": "**Codebase Steward Agent:**\n  - Analyzes the indexed codebase to derive its unique structural relationships, data flows, interaction patterns, and emergent \"living standards.\"",
+      "signature": "- Analyzes the indexed codebase to derive its unique structural relationships, data flows, interaction patterns, and emergent \"living standards.\""
+    },
+    "Implementer Agent:docs/project-vision.md:73": {
+      "name": "Implementer Agent",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 73,
+        "endLine": 74,
+        "startColumn": 3,
+        "endColumn": 163
+      },
+      "content": "**Implementer Agent:**\n  - Executes development tasks (new features, bug fixes, refactoring) based on user requests and the Codebase Steward's precise guidance.",
+      "signature": "- Executes development tasks (new features, bug fixes, refactoring) based on user requests and the Codebase Steward's precise guidance."
+    },
+    "LLM-Optimized Knowledge Representation:docs/project-vision.md:76": {
+      "name": "LLM-Optimized Knowledge Representation",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 76,
+        "endLine": 76,
+        "startColumn": 3,
+        "endColumn": 458
+      },
+      "content": "**LLM-Optimized Knowledge Representation:** The Codebase Steward will process, store, and communicate his understanding of the codebase using multifaceted textual formats (natural language explanations, illustrative code snippets, structured data like JSON, and focused textual diagrams where appropriate). This approach aims to align with LLM training data patterns, optimizing their capacity to understand and utilize the provided knowledge effectively.",
+      "signature": "The Codebase Steward will process, store, and communicate his understanding of the codebase using multifaceted textual formats (natural language explanations, illustrative code snippets, structured data like JSON, and focused textual diagrams where appropriate). This approach aims to align with LLM training data patterns, optimizing their capacity to understand and utilize the provided knowledge effectively."
+    },
+    "Interactive TUI:docs/project-vision.md:77": {
+      "name": "Interactive TUI",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 77,
+        "endLine": 77,
+        "startColumn": 3,
+        "endColumn": 149
+      },
+      "content": "**Interactive TUI:** A command-line interface for users to initiate tasks, review plans, confirm actions, and interact with the GuardianAI agents.",
+      "signature": "A command-line interface for users to initiate tasks, review plans, confirm actions, and interact with the GuardianAI agents."
+    },
+    "Multi-LLM Support:docs/project-vision.md:78": {
+      "name": "Multi-LLM Support",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 78,
+        "endLine": 78,
+        "startColumn": 3,
+        "endColumn": 230
+      },
+      "content": "**Multi-LLM Support:** A flexible `ILLMService` to interface with the latest, most capable models from leading providers like Google (Gemini 1.5 Pro), Anthropic (Claude 3.5 Sonnet), and DeepSeek (latest Coder/Reasoning models).",
+      "signature": "A flexible `ILLMService` to interface with the latest, most capable models from leading providers like Google (Gemini 1.5 Pro), Anthropic (Claude 3.5 Sonnet), and DeepSeek (latest Coder/Reasoning models)."
+    },
+    "8. Core Functionality (High-Level):docs/project-vision.md:66": {
+      "name": "8. Core Functionality (High-Level)",
+      "type": "section",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 66,
+        "endLine": 67,
+        "startColumn": 1,
+        "endColumn": 39
+      },
+      "content": "## 8. Core Functionality (High-Level)\n"
+    },
+    "9. Key Success Criteria:docs/project-vision.md:80": {
+      "name": "9. Key Success Criteria",
+      "type": "section",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 80,
+        "endLine": 81,
+        "startColumn": 1,
+        "endColumn": 28
+      },
+      "content": "## 9. Key Success Criteria\n"
+    },
+    "Primary Language/Runtime:docs/project-vision.md:91": {
+      "name": "Primary Language/Runtime",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 91,
+        "endLine": 91,
+        "startColumn": 3,
+        "endColumn": 84
+      },
+      "content": "**Primary Language/Runtime:** TypeScript with Bun (or Node.js as an alternative).",
+      "signature": "TypeScript with Bun (or Node.js as an alternative)."
+    },
+    "User Interface:docs/project-vision.md:92": {
+      "name": "User Interface",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 92,
+        "endLine": 92,
+        "startColumn": 3,
+        "endColumn": 86
+      },
+      "content": "**User Interface:** Text-based User Interface (TUI) built with Ink (React for CLI).",
+      "signature": "Text-based User Interface (TUI) built with Ink (React for CLI)."
+    },
+    "LLM Interaction:docs/project-vision.md:93": {
+      "name": "LLM Interaction",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 93,
+        "endLine": 93,
+        "startColumn": 3,
+        "endColumn": 112
+      },
+      "content": "**LLM Interaction:** Direct API integration with leading LLM providers via a custom, adaptable `ILLMService`.",
+      "signature": "Direct API integration with leading LLM providers via a custom, adaptable `ILLMService`."
+    },
+    "Core Logic Implementation:docs/project-vision.md:94": {
+      "name": "Core Logic Implementation",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 94,
+        "endLine": 94,
+        "startColumn": 3,
+        "endColumn": 268
+      },
+      "content": "**Core Logic Implementation:** Emphasis on custom, \"from-the-ground-up\" development for core components like codebase indexing, the RAG system, agent interaction protocols, and specialized agent tooling, to ensure maximum control and fidelity to the project vision.",
+      "signature": "Emphasis on custom, \"from-the-ground-up\" development for core components like codebase indexing, the RAG system, agent interaction protocols, and specialized agent tooling, to ensure maximum control and fidelity to the project vision."
+    },
+    "Software Design:docs/project-vision.md:95": {
+      "name": "Software Design",
+      "type": "component",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 95,
+        "endLine": 95,
+        "startColumn": 3,
+        "endColumn": 116
+      },
+      "content": "**Software Design:** Modular service-oriented architecture to promote separation of concerns and maintainability.",
+      "signature": "Modular service-oriented architecture to promote separation of concerns and maintainability."
+    },
+    "10. High-Level Technical Approach/Principles:docs/project-vision.md:89": {
+      "name": "10. High-Level Technical Approach/Principles",
+      "type": "section",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 89,
+        "endLine": 90,
+        "startColumn": 1,
+        "endColumn": 49
+      },
+      "content": "## 10. High-Level Technical Approach/Principles\n"
+    },
+    "11. Our Collaborative Approach: The GuardianAI Development Team:docs/project-vision.md:97": {
+      "name": "11. Our Collaborative Approach: The GuardianAI Development Team",
+      "type": "section",
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 97,
+        "endLine": 98,
+        "startColumn": 1,
+        "endColumn": 68
+      },
+      "content": "## 11. Our Collaborative Approach: The GuardianAI Development Team\n"
+    },
+    "GuardianAI:docs/project-vision.md:1": {
+      "name": "GuardianAI",
+      "type": "project",
+      "description": "An AI-powered development environment with intelligent agent duo (Codebase Steward and Implementer Agent) to ensure high-quality code integration",
+      "startLine": 1,
+      "endLine": 104,
+      "children": [
+        {
+          "name": "Codebase Steward",
+          "type": "component",
+          "description": "AI agent that analyzes codebases to derive structural relationships, data flows, and patterns, providing guidance to the Implementer Agent",
+          "startLine": 39,
+          "endLine": 39,
+          "metadata": {
+            "responsibility": "Codebase analysis and guidance"
+          }
+        },
+        {
+          "name": "Implementer Agent",
+          "type": "component",
+          "description": "AI agent that executes development tasks based on user requests and the Codebase Steward's guidance",
+          "startLine": 40,
+          "endLine": 40,
+          "metadata": {
+            "responsibility": "Code generation and implementation"
+          }
+        },
+        {
+          "name": "ILLMService",
+          "type": "interface",
+          "description": "Flexible service to interface with the latest, most capable LLM models from leading providers",
+          "startLine": 79,
+          "endLine": 79,
+          "metadata": {
+            "providers": [
+              "Google (Gemini 1.5 Pro)",
+              "Anthropic (Claude 3.5 Sonnet)",
+              "DeepSeek"
+            ]
+          }
+        },
+        {
+          "name": "Core Functionality",
+          "type": "section",
+          "description": "High-level functionality of the GuardianAI system",
+          "startLine": 66,
+          "endLine": 79,
+          "children": [
+            {
+              "name": "Comprehensive Codebase Indexing",
+              "type": "feature",
+              "description": "Utilizing ASTs, semantic analysis, and pattern recognition to understand project structure",
+              "startLine": 68,
+              "endLine": 68
+            },
+            {
+              "name": "LLM-Optimized Knowledge Representation",
+              "type": "feature",
+              "description": "Processing and storing codebase understanding using multifaceted textual formats",
+              "startLine": 76,
+              "endLine": 76
+            },
+            {
+              "name": "Interactive TUI",
+              "type": "feature",
+              "description": "Command-line interface for users to interact with GuardianAI agents",
+              "startLine": 77,
+              "endLine": 77
+            },
+            {
+              "name": "Multi-LLM Support",
+              "type": "feature",
+              "description": "Support for multiple LLM providers through ILLMService",
+              "startLine": 78,
+              "endLine": 79
+            }
+          ]
+        },
+        {
+          "name": "Technical Approach",
+          "type": "section",
+          "description": "High-level technical principles and architecture",
+          "startLine": 89,
+          "endLine": 96,
+          "children": [
+            {
+              "name": "Primary Language/Runtime",
+              "type": "technology",
+              "description": "TypeScript with Bun (or Node.js as an alternative)",
+              "startLine": 91,
+              "endLine": 91
+            },
+            {
+              "name": "User Interface",
+              "type": "technology",
+              "description": "Text-based User Interface (TUI) built with Ink (React for CLI)",
+              "startLine": 92,
+              "endLine": 92
+            },
+            {
+              "name": "LLM Interaction",
+              "type": "technology",
+              "description": "Direct API integration with leading LLM providers via ILLMService",
+              "startLine": 93,
+              "endLine": 93
+            },
+            {
+              "name": "Core Logic Implementation",
+              "type": "architecture",
+              "description": "Custom development for core components like codebase indexing, RAG system, and agent protocols",
+              "startLine": 94,
+              "endLine": 94
+            },
+            {
+              "name": "Software Design",
+              "type": "architecture",
+              "description": "Modular service-oriented architecture for separation of concerns",
+              "startLine": 95,
+              "endLine": 95
+            }
+          ]
+        }
+      ],
+      "location": {
+        "filePath": "docs/project-vision.md",
+        "startLine": 1,
+        "endLine": 1,
+        "startColumn": 1,
+        "endColumn": 1
+      }
+    },
+    "name:package.json:2": {
+      "name": "name",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 2,
+        "endLine": 2,
+        "startColumn": 2,
+        "endColumn": 9
+      },
+      "content": "\"name\":"
+    },
+    "version:package.json:3": {
+      "name": "version",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 3,
+        "endLine": 3,
+        "startColumn": 2,
+        "endColumn": 12
+      },
+      "content": "\"version\":"
+    },
+    "license:package.json:4": {
+      "name": "license",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 4,
+        "endLine": 4,
+        "startColumn": 2,
+        "endColumn": 12
+      },
+      "content": "\"license\":"
+    },
+    "bin:package.json:5": {
+      "name": "bin",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 5,
+        "endLine": 5,
+        "startColumn": 2,
+        "endColumn": 8
+      },
+      "content": "\"bin\":"
+    },
+    "type:package.json:8": {
+      "name": "type",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 8,
+        "endLine": 8,
+        "startColumn": 2,
+        "endColumn": 9
+      },
+      "content": "\"type\":"
+    },
+    "engines:package.json:9": {
+      "name": "engines",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 9,
+        "endLine": 9,
+        "startColumn": 2,
+        "endColumn": 12
+      },
+      "content": "\"engines\":"
+    },
+    "node:package.json:10": {
+      "name": "node",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 10,
+        "endLine": 10,
+        "startColumn": 3,
+        "endColumn": 10
+      },
+      "content": "\"node\":"
+    },
+    "scripts:package.json:12": {
+      "name": "scripts",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 12,
+        "endLine": 12,
+        "startColumn": 2,
+        "endColumn": 12
+      },
+      "content": "\"scripts\":"
+    },
+    "build:package.json:13": {
+      "name": "build",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 13,
+        "endLine": 13,
+        "startColumn": 3,
+        "endColumn": 11
+      },
+      "content": "\"build\":"
+    },
+    "dev:package.json:14": {
+      "name": "dev",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 14,
+        "endLine": 14,
+        "startColumn": 3,
+        "endColumn": 9
+      },
+      "content": "\"dev\":"
+    },
+    "start:package.json:15": {
+      "name": "start",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 15,
+        "endLine": 15,
+        "startColumn": 3,
+        "endColumn": 11
+      },
+      "content": "\"start\":"
+    },
+    "test:package.json:16": {
+      "name": "test",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 16,
+        "endLine": 16,
+        "startColumn": 3,
+        "endColumn": 10
+      },
+      "content": "\"test\":"
+    },
+    "files:package.json:19": {
+      "name": "files",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 19,
+        "endLine": 19,
+        "startColumn": 2,
+        "endColumn": 10
+      },
+      "content": "\"files\":"
+    },
+    "dependencies:package.json:22": {
+      "name": "dependencies",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 22,
+        "endLine": 22,
+        "startColumn": 2,
+        "endColumn": 17
+      },
+      "content": "\"dependencies\":"
+    },
+    "dotenv:package.json:25": {
+      "name": "dotenv",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 25,
+        "endLine": 25,
+        "startColumn": 3,
+        "endColumn": 12
+      },
+      "content": "\"dotenv\":"
+    },
+    "ink:package.json:27": {
+      "name": "ink",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 27,
+        "endLine": 27,
+        "startColumn": 3,
+        "endColumn": 9
+      },
+      "content": "\"ink\":"
+    },
+    "meow:package.json:31": {
+      "name": "meow",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 31,
+        "endLine": 31,
+        "startColumn": 3,
+        "endColumn": 10
+      },
+      "content": "\"meow\":"
+    },
+    "openai:package.json:32": {
+      "name": "openai",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 32,
+        "endLine": 32,
+        "startColumn": 3,
+        "endColumn": 12
+      },
+      "content": "\"openai\":"
+    },
+    "path:package.json:33": {
+      "name": "path",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 33,
+        "endLine": 33,
+        "startColumn": 3,
+        "endColumn": 10
+      },
+      "content": "\"path\":"
+    },
+    "react:package.json:34": {
+      "name": "react",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 34,
+        "endLine": 34,
+        "startColumn": 3,
+        "endColumn": 11
+      },
+      "content": "\"react\":"
+    },
+    "yaml:package.json:50": {
+      "name": "yaml",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 50,
+        "endLine": 50,
+        "startColumn": 3,
+        "endColumn": 10
+      },
+      "content": "\"yaml\":"
+    },
+    "devDependencies:package.json:52": {
+      "name": "devDependencies",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 52,
+        "endLine": 52,
+        "startColumn": 2,
+        "endColumn": 20
+      },
+      "content": "\"devDependencies\":"
+    },
+    "ava:package.json:56": {
+      "name": "ava",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 56,
+        "endLine": 56,
+        "startColumn": 3,
+        "endColumn": 9
+      },
+      "content": "\"ava\":"
+    },
+    "chalk:package.json:57": {
+      "name": "chalk",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 57,
+        "endLine": 57,
+        "startColumn": 3,
+        "endColumn": 11
+      },
+      "content": "\"chalk\":"
+    },
+    "prettier:package.json:62": {
+      "name": "prettier",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 62,
+        "endLine": 62,
+        "startColumn": 3,
+        "endColumn": 14
+      },
+      "content": "\"prettier\":"
+    },
+    "typescript:package.json:64": {
+      "name": "typescript",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 64,
+        "endLine": 64,
+        "startColumn": 3,
+        "endColumn": 16
+      },
+      "content": "\"typescript\":"
+    },
+    "xo:package.json:65": {
+      "name": "xo",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 65,
+        "endLine": 65,
+        "startColumn": 3,
+        "endColumn": 8
+      },
+      "content": "\"xo\":"
+    },
+    "ava:package.json:67": {
+      "name": "ava",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 67,
+        "endLine": 67,
+        "startColumn": 2,
+        "endColumn": 8
+      },
+      "content": "\"ava\":"
+    },
+    "extensions:package.json:68": {
+      "name": "extensions",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 68,
+        "endLine": 68,
+        "startColumn": 3,
+        "endColumn": 16
+      },
+      "content": "\"extensions\":"
+    },
+    "ts:package.json:69": {
+      "name": "ts",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 69,
+        "endLine": 69,
+        "startColumn": 4,
+        "endColumn": 9
+      },
+      "content": "\"ts\":"
+    },
+    "tsx:package.json:70": {
+      "name": "tsx",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 70,
+        "endLine": 70,
+        "startColumn": 4,
+        "endColumn": 10
+      },
+      "content": "\"tsx\":"
+    },
+    "nodeArguments:package.json:72": {
+      "name": "nodeArguments",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 72,
+        "endLine": 72,
+        "startColumn": 3,
+        "endColumn": 19
+      },
+      "content": "\"nodeArguments\":"
+    },
+    "xo:package.json:76": {
+      "name": "xo",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 76,
+        "endLine": 76,
+        "startColumn": 2,
+        "endColumn": 7
+      },
+      "content": "\"xo\":"
+    },
+    "extends:package.json:77": {
+      "name": "extends",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 77,
+        "endLine": 77,
+        "startColumn": 3,
+        "endColumn": 13
+      },
+      "content": "\"extends\":"
+    },
+    "prettier:package.json:78": {
+      "name": "prettier",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 78,
+        "endLine": 78,
+        "startColumn": 3,
+        "endColumn": 14
+      },
+      "content": "\"prettier\":"
+    },
+    "rules:package.json:79": {
+      "name": "rules",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 79,
+        "endLine": 79,
+        "startColumn": 3,
+        "endColumn": 11
+      },
+      "content": "\"rules\":"
+    },
+    "prettier:package.json:83": {
+      "name": "prettier",
+      "type": "variable",
+      "location": {
+        "filePath": "package.json",
+        "startLine": 83,
+        "endLine": 83,
+        "startColumn": 2,
+        "endColumn": 13
+      },
+      "content": "\"prettier\":"
+    }
+  },
+  "dependencies": [
+    {
+      "source": "init",
+      "target": "GuardianAI",
+      "type": "call"
+    },
+    {
+      "source": "task",
+      "target": "ask",
+      "type": "call"
+    },
+    {
+      "source": "src/themes/definitions/",
+      "target": "init",
+      "type": "call"
+    },
+    {
+      "type": "implements"
+    },
+    {
+      "type": "contains"
+    },
+    {
+      "type": "component"
+    },
+    {
+      "type": "references"
+    },
+    {
+      "type": "uses"
+    },
+    {
+      "type": "supports"
+    },
+    {
+      "type": "orchestrates"
+    },
+    {
+      "type": "provides"
+    },
+    {
+      "type": "precedes"
+    },
+    {
+      "type": "enables"
+    },
+    {
+      "type": "workflow"
+    },
+    {
+      "type": "provides_data_for"
+    },
+    {
+      "type": "guides"
+    },
+    {
+      "type": "invokes"
+    },
+    {
+      "type": "integrates"
+    },
+    {
+      "type": "includes"
+    },
+    {
+      "type": "defines"
+    },
+    {
+      "type": "interacts"
+    },
+    {
+      "type": "uses"
+    },
+    {
+      "type": "generates"
+    },
+    {
+      "type": "maintains"
+    },
+    {
+      "type": "provides_data_to"
+    },
+    {
+      "type": "implements"
+    },
+    {
+      "type": "powers"
+    },
+    {
+      "type": "alternative_to"
+    },
+    {
+      "type": "contains"
+    },
+    {
+      "type": "introduces"
+    },
+    {
+      "type": "enhances"
+    },
+    {
+      "type": "provides_guidance"
+    },
+    {
+      "type": "provides"
+    },
+    {
+      "source": "#",
+      "target": "GuardianAI Implementation Guide",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "Project Overview",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "Implementation Phases",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "Terminal Theming System Implementation",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "Theme",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "Theme",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "Theme",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "Theme",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "ThemeColors",
+      "target": "Theme",
+      "type": "call"
+    },
+    {
+      "source": "ThemeColors",
+      "target": "Text",
+      "type": "call"
+    },
+    {
+      "source": "Theme",
+      "target": "ThemeColors",
+      "type": "call"
+    },
+    {
+      "source": "useTheme",
+      "target": "Theme",
+      "type": "call"
+    },
+    {
+      "source": "loadThemes",
+      "target": "Theme",
+      "type": "call"
+    },
+    {
+      "source": "ThemeProvider",
+      "target": "Theme",
+      "type": "call"
+    },
+    {
+      "source": "darkTheme",
+      "target": "Theme",
+      "type": "call"
+    },
+    {
+      "source": "lightTheme",
+      "target": "Theme",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "Project Structure",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "Getting Started",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "call"
+    },
+    {
+      "source": "##",
+      "target": "Resources",
+      "type": "call"
+    },
+    {
+      "type": "contains"
+    },
+    {
+      "type": "used-by"
+    },
+    {
+      "type": "implements"
+    },
+    {
+      "type": "uses"
+    },
+    {
+      "type": "exports"
+    },
+    {
+      "type": "calls"
+    },
+    {
+      "source": "##",
+      "target": "#",
+      "type": "dependency",
+      "metadata": {}
+    },
+    {
+      "source": "###",
+      "target": "#",
+      "type": "dependency",
+      "metadata": {}
+    },
+    {
+      "source": "###",
+      "target": "##",
+      "type": "dependency",
+      "metadata": {}
+    },
+    {
+      "type": "composition"
+    },
+    {
+      "type": "returns"
+    },
+    {
+      "type": "provides"
+    },
+    {
+      "type": "consumes"
+    },
+    {
+      "type": "references"
+    },
+    {
+      "source": "###",
+      "target": "Theme",
+      "type": "uses",
+      "metadata": {}
+    },
+    {
+      "source": "ThemeColors",
+      "target": "Text",
+      "type": "uses",
+      "metadata": {}
+    },
+    {
+      "source": "Theme",
+      "target": "ThemeColors",
+      "type": "uses",
+      "metadata": {}
+    },
+    {
+      "source": "darkTheme",
+      "target": "Theme",
+      "type": "uses",
+      "metadata": {}
+    },
+    {
+      "source": "###",
+      "target": "Theme",
+      "type": "references",
+      "metadata": {}
+    },
+    {
+      "source": "ThemeColors",
+      "target": "Text",
+      "type": "references",
+      "metadata": {}
+    },
+    {
+      "source": "Theme",
+      "target": "ThemeColors",
+      "type": "references",
+      "metadata": {}
+    },
+    {
+      "source": "darkTheme",
+      "target": "Theme",
+      "type": "references",
+      "metadata": {}
+    },
+    {
+      "type": "consumed_by"
+    },
+    {
+      "type": "provides_context"
+    },
+    {
+      "type": "used_by"
+    },
+    {
+      "type": "included_in"
+    },
+    {
+      "type": "imported_by"
+    },
+    {
+      "type": "precedes"
+    },
+    {
+      "type": "defines"
+    },
+    {
+      "type": "guides"
+    },
+    {
+      "type": "composes"
+    },
+    {
+      "type": "instantiates"
+    },
+    {
+      "source": "Authors",
+      "target": "GuardianAI",
+      "type": "call"
+    },
+    {
+      "source": "Mission",
+      "target": "Implementer Agent",
+      "type": "call"
+    },
+    {
+      "source": "Mission",
+      "target": "GuardianAI",
+      "type": "call"
+    },
+    {
+      "source": "4. Project Vision / Mission",
+      "target": "Vision",
+      "type": "call"
+    },
+    {
+      "source": "4. Project Vision / Mission",
+      "target": "Mission",
+      "type": "call"
+    },
+    {
+      "source": "Philosophical Lineage (Inspired by IdeasFactory)",
+      "target": "GuardianAI",
+      "type": "call"
+    },
+    {
+      "source": "Codebase Uniqueness",
+      "target": "GuardianAI",
+      "type": "call"
+    },
+    {
+      "source": "Empowering the Implementer",
+      "target": "Implementer Agent",
+      "type": "call"
+    },
+    {
+      "source": "Code Quality & Integrity Mandate",
+      "target": "GuardianAI",
+      "type": "call"
+    },
+    {
+      "source": "Our Perspective on LLM Potential",
+      "target": "GuardianAI",
+      "type": "call"
+    },
+    {
+      "source": "Full Control & Transparency (in GuardianAI's development)",
+      "target": "GuardianAI",
+      "type": "call"
+    },
+    {
+      "source": "User Experience (for the GuardianAI tool)",
+      "target": "User Interface",
+      "type": "call"
+    },
+    {
+      "source": "User Experience (for the GuardianAI tool)",
+      "target": "GuardianAI",
+      "type": "call"
+    },
+    {
+      "source": "Continuous Learning & Adaptation",
+      "target": "GuardianAI",
+      "type": "call"
+    },
+    {
+      "source": "Proactive, Contextualized Planning & Guidance",
+      "target": "Implementer Agent",
+      "type": "call"
+    },
+    {
+      "source": "Focus on Truly Integrated and Clean Code",
+      "target": "Code Quality & Integrity Mandate",
+      "type": "call"
+    },
+    {
+      "source": "Interactive TUI",
+      "target": "GuardianAI",
+      "type": "call"
+    },
+    {
+      "source": "11. Our Collaborative Approach: The GuardianAI Development Team",
+      "target": "GuardianAI",
+      "type": "call"
+    },
+    {
+      "type": "contains"
+    },
+    {
+      "type": "references"
+    },
+    {
+      "type": "defines"
+    },
+    {
+      "type": "influences"
+    },
+    {
+      "source": "4. Project Vision / Mission",
+      "target": "Vision",
+      "type": "references",
+      "metadata": {}
+    },
+    {
+      "source": "4. Project Vision / Mission",
+      "target": "Mission",
+      "type": "references",
+      "metadata": {}
+    },
+    {
+      "source": "4. Project Vision / Mission",
+      "target": "Vision",
+      "type": "defines",
+      "metadata": {}
+    },
+    {
+      "source": "4. Project Vision / Mission",
+      "target": "Vision",
+      "type": "influences",
+      "metadata": {}
+    },
+    {
+      "source": "4. Project Vision / Mission",
+      "target": "Mission",
+      "type": "influences",
+      "metadata": {}
+    },
+    {
+      "type": "enables"
+    },
+    {
+      "type": "guides"
+    },
+    {
+      "type": "implements"
+    },
+    {
+      "type": "informs"
+    },
+    {
+      "type": "collaborates_with"
+    },
+    {
+      "type": "constrains"
+    },
+    {
+      "type": "requires"
+    },
+    {
+      "type": "enhances"
+    },
+    {
+      "type": "serves"
+    },
+    {
+      "type": "uses"
+    },
+    {
+      "type": "produces"
+    },
+    {
+      "type": "consumes"
+    },
+    {
+      "type": "interacts_with"
+    },
+    {
+      "type": "specifies"
+    },
+    {
+      "type": "includes"
+    },
+    {
+      "source": "scripts",
+      "target": "ts",
+      "type": "call"
+    },
+    {
+      "source": "devDependencies",
+      "target": "dev",
+      "type": "call"
+    },
+    {
+      "source": "typescript",
+      "target": "type",
+      "type": "call"
+    },
+    {
+      "source": "tsx",
+      "target": "ts",
+      "type": "call"
+    },
+    {
+      "source": "nodeArguments",
+      "target": "node",
+      "type": "call"
+    },
+    {
+      "source": "nodeArguments",
+      "target": "ts",
+      "type": "call"
+    },
+    {
+      "type": "entryPoint"
+    },
+    {
+      "type": "buildCommand"
+    },
+    {
+      "type": "devEntryPoint"
+    },
+    {
+      "type": "scriptDependency"
+    },
+    {
+      "type": "executionTarget"
+    },
+    {
+      "type": "testDependency"
+    },
+    {
+      "type": "setupScript"
+    },
+    {
+      "type": "packageInclude"
+    },
+    {
+      "type": "dependency"
+    },
+    {
+      "type": "devDependency"
+    },
+    {
+      "type": "configSetting"
+    },
+    {
+      "type": "configExtension"
+    },
+    {
+      "type": "configReference"
+    },
+    {
+      "type": "script-definition"
+    },
+    {
+      "type": "script-dependency"
+    },
+    {
+      "type": "tool-usage"
+    },
+    {
+      "type": "package-dependency"
+    },
+    {
+      "type": "dev-dependency"
+    },
+    {
+      "type": "config-extension"
+    },
+    {
+      "type": "config-reference"
+    },
+    {
+      "type": "uses"
+    },
+    {
+      "type": "configures"
+    },
+    {
+      "type": "complements"
+    },
+    {
+      "type": "depends"
+    },
+    {
+      "type": "references"
+    },
+    {
+      "type": "configuration"
+    },
+    {
+      "type": "test_configuration"
+    }
+  ],
+  "files": [
+    "CLAUDE.md",
+    "docs/implementation-phases.md",
+    "docs/implementation-plan.md",
+    "docs/project-vision.md",
+    "package.json"
+  ],
+  "statistics": {
+    "totalFiles": 5,
+    "totalSymbols": 179,
+    "totalDependencies": 353,
+    "lastIndexed": "2025-05-10T18:36:17.189Z"
+  }
+}

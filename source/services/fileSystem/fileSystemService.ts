@@ -406,31 +406,41 @@ export class NodeFileSystemService implements FileSystemService {
 		// If no filter, include everything
 		if (!filter) return true;
 
-		// Check extension inclusions
-		if (filter.includeExtensions?.length && !fileInfo.isDirectory) {
-			if (!filter.includeExtensions.includes(fileInfo.extension)) {
+		// First check custom includeFilter if it exists (highest priority)
+		if (filter.includeFilter) {
+			if (!filter.includeFilter(fileInfo.path)) {
 				return false;
+			}
+			// If the custom filter matched, we still need to check exclusions
+		}
+		// Otherwise check standard filters if no custom filter or if custom filter passed
+		else {
+			// Check extension inclusions
+			if (filter.includeExtensions?.length && !fileInfo.isDirectory) {
+				if (!filter.includeExtensions.includes(fileInfo.extension)) {
+					return false;
+				}
+			}
+
+			// Check pattern inclusions
+			if (filter.includePatterns?.length) {
+				const matchesInclude = filter.includePatterns.some(pattern =>
+					pattern.test(fileInfo.path),
+				);
+				if (!matchesInclude) {
+					return false;
+				}
 			}
 		}
 
-		// Check extension exclusions
+		// Check extension exclusions (these always apply)
 		if (filter.excludeExtensions?.length && !fileInfo.isDirectory) {
 			if (filter.excludeExtensions.includes(fileInfo.extension)) {
 				return false;
 			}
 		}
 
-		// Check pattern inclusions
-		if (filter.includePatterns?.length) {
-			const matchesInclude = filter.includePatterns.some(pattern =>
-				pattern.test(fileInfo.path),
-			);
-			if (!matchesInclude) {
-				return false;
-			}
-		}
-
-		// Check pattern exclusions
+		// Check pattern exclusions (these always apply)
 		if (filter.excludePatterns?.length) {
 			const matchesExclude = filter.excludePatterns.some(pattern =>
 				pattern.test(fileInfo.path),

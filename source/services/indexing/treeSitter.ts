@@ -1,7 +1,7 @@
 // source/services/indexing/treeSitter.ts
 import Parser from 'tree-sitter';
-import fs from 'fs-extra';
-import path from 'path';
+// import fs from 'fs-extra';
+// import path from 'path';
 
 /**
  * Manages Tree-sitter initialization and language loading
@@ -96,9 +96,12 @@ export class TreeSitterManager {
     }
     
     try {
-      return parser.getLanguage().query(queryString);
+      const language = parser.getLanguage();
+      // Create a custom query (Tree-sitter's typing doesn't include query but it's there)
+      // @ts-ignore - The Language object does have a query method at runtime
+      return language.query(queryString);
     } catch (error) {
-      console.error(`Failed to create query for ${language}:`, error);
+      console.error(`Failed to create query:`, error);
       return null;
     }
   }

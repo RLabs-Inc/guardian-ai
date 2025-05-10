@@ -1,7 +1,7 @@
 // source/services/indexing/parsers/javascriptParser.ts
 import { BaseParser } from './baseParser.js';
 import { TreeSitterManager } from '../treeSitter.js';
-import { CodeSymbol, CodeDependency, CodeLocation } from '../types.js';
+import { CodeSymbol, CodeDependency } from '../types.js';
 import * as jsQueries from '../queries/javascript.js';
 import Parser from 'tree-sitter';
 
@@ -16,7 +16,7 @@ export class JavaScriptParser extends BaseParser {
     this.treeSitter = TreeSitterManager.getInstance();
   }
   
-  async initialize(): Promise<void> {
+  override async initialize(): Promise<void> {
     await this.treeSitter.initialize();
   }
   

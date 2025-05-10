@@ -19,6 +19,7 @@ export interface FileSystemFilter {
 	excludeExtensions?: string[];
 	includePatterns?: RegExp[];
 	excludePatterns?: RegExp[];
+	includeFilter?: (filePath: string) => boolean;
 	maxDepth?: number;
 }
 

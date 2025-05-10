@@ -28,7 +28,7 @@ export class AnthropicService implements LLMService {
 
 			const response = await this.client.messages.create({
 				model: options?.model || this.defaultModel,
-				max_tokens: options?.maxTokens || 1024,
+				max_tokens: options?.maxTokens || 64000,
 				temperature: options?.temperature || 0.7,
 				system: systemPrompt || 'You are a helpful AI assistant.',
 				messages: [{role: 'user', content: prompt}],
@@ -82,9 +82,9 @@ export class AnthropicService implements LLMService {
 		try {
 			const {prompt, systemPrompt, options} = request;
 
-			const stream = await this.client.messages.stream({
+			const stream = this.client.messages.stream({
 				model: options?.model || this.defaultModel,
-				max_tokens: options?.maxTokens || 1024,
+				max_tokens: options?.maxTokens || 64000,
 				temperature: options?.temperature || 0.7,
 				system: systemPrompt || 'You are a helpful AI assistant.',
 				messages: [{role: 'user', content: prompt}],
