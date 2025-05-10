@@ -11,7 +11,7 @@
 	},
 	"scripts": {
 		"build": "tsc",
-		"dev": "ts-node src/cli.ts",
+		"dev": "ts-node source/cli.tsx",
 		"start": "bun run build && node dist/cli.js",
 		"test": "prettier --check . && xo && ava",
 		"setup-wasm": "node ./source/tree-sitter-wasm/download-wasm-parsers.js"

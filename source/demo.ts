@@ -43,7 +43,7 @@ async function runDemo() {
 		const indexedCodebase = await indexingService.indexCodebase(
 			absoluteTargetDir,
 			{
-				maxFiles: 5, // Limit to 5 files for the demo
+				maxFiles: 1000,
 			},
 		);
 

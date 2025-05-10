@@ -1,5 +1,4 @@
 // source/services/indexing/llmDirected/patternInterpreter.ts
-
 import { ChunkingPattern } from './agentProtocol.js';
 import { StoragePrimitives } from './storagePrimitives.js';
 
@@ -73,7 +72,7 @@ export class PatternInterpreter {
       return await this.storagePrimitives.chunkByLineCount(filePath, 100);
     }
   }
-  
+
   /**
    * Executes a regex-based chunking pattern
    */
@@ -153,7 +152,7 @@ export class PatternInterpreter {
       return this.fallbackLineChunking(content);
     }
   }
-  
+
   /**
    * Executes a delimiter-based chunking pattern
    */
@@ -207,7 +206,7 @@ export class PatternInterpreter {
       return this.fallbackLineChunking(content);
     }
   }
-  
+
   /**
    * Executes a block-based chunking pattern (for code blocks, functions, etc.)
    */
@@ -228,7 +227,7 @@ export class PatternInterpreter {
       // Create regex for finding blocks
       const blockRegex = blockEnd 
         ? new RegExp(`${blockStart}[\\s\\S]*?${blockEnd}`, 'g')
-        : new RegExp(`${blockStart}[\\s\\S]*?$`, 'g');
+        : new RegExp(`${blockStart}[\\s\\S]*?`, 'g');
       
       // Find all blocks
       let match;
@@ -271,8 +270,8 @@ export class PatternInterpreter {
         
         // Define regex for different heading levels
         const headingRegexes = Array.isArray(headingLevel) 
-          ? headingLevel.map(level => new RegExp(`^#{${level}}\\s+(.+)$`, 'gm'))
-          : [new RegExp(`^#{${headingLevel}}\\s+(.+)$`, 'gm')];
+          ? headingLevel.map(level => new RegExp(`^#{${level}}\\s+(.+)`, 'gm'))
+          : [new RegExp(`^#{${headingLevel}}\\s+(.+)`, 'gm')];
         
         // Find all headings at the specified levels
         const headings: {level: number, text: string, index: number, line: number}[] = [];
@@ -321,7 +320,7 @@ export class PatternInterpreter {
       return this.fallbackLineChunking(content);
     }
   }
-  
+
   /**
    * Executes a fixed-size chunking pattern (line-based)
    */
@@ -347,7 +346,7 @@ export class PatternInterpreter {
       return await this.storagePrimitives.chunkByLineCount(filePath, 100);
     }
   }
-  
+
   /**
    * Executes a hierarchy-based chunking pattern
    */
@@ -462,7 +461,7 @@ export class PatternInterpreter {
   private executeStructuredPattern(content: string, pattern: ChunkingPattern): FileChunk[] {
     console.log(`Executing structured pattern: ${JSON.stringify(pattern.definition)}`);
     // Initial chunks array not used as each format handler returns its own chunks
-
+    
     try {
       // Get the structured data format
       const format = pattern.definition['format'] || 'json';

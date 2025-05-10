@@ -7,12 +7,16 @@ export * from './llmDirected/index.js';
 
 // Default exports
 import { TreeSitterIndexingService } from './indexingService.js';
-import { LLMDirectedIndexingService } from './llmDirected/llmDirectedIndexingService.js';
+import {
+  LLMDirectedIndexingService,
+  VectorizedIndexingService
+} from './llmDirected/index.js';
 
-export { 
-  TreeSitterIndexingService, 
-  LLMDirectedIndexingService 
+export {
+  TreeSitterIndexingService,
+  LLMDirectedIndexingService,
+  VectorizedIndexingService
 };
 
-// Default export - we'll keep the TreeSitter version as the default for now
-export default TreeSitterIndexingService;
+// Default export - Now we prefer the Vectorized LLM-directed version as default
+export default VectorizedIndexingService;

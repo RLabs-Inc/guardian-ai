@@ -28,6 +28,7 @@ import { CodeSymbol, CodeDependency } from '../types.js';
 import { PatternInterpreter } from './patternInterpreter.js';
 import { SymbolExtractor } from './symbolExtractor.js';
 import { RelationshipMapper } from './relationshipMapper.js';
+import { getMemoryMonitor } from '../../utils/memoryMonitor.js';
 
 /**
  * Manages communication with the LLM for indexing decisions
@@ -997,18 +998,39 @@ export class IndexingAgent {
   private async makeAgentRequest<Req extends AgentRequest, Res extends AgentResponse>(
     request: Req
   ): Promise<Res> {
+    // Get memory monitor
+    const memoryMonitor = getMemoryMonitor();
+    const requestType = request.action.toString();
+
     try {
+      // Log memory usage at the start of the request
+      memoryMonitor.logMemoryUsage(`${requestType}_start`, {
+        requestType,
+        dataSize: this.estimateRequestSize(request)
+      });
+
       // Check if this is a large request that might result in truncation
       const isLargeRequest = this.isLikelyLargeRequest(request);
 
       if (isLargeRequest) {
         console.log("Detected potentially large request, using multi-step approach...");
-        return await this.makeMultiStepRequest<Req, Res>(request);
+        memoryMonitor.logMemoryUsage(`${requestType}_large_request_detected`);
+        const result = await this.makeMultiStepRequest<Req, Res>(request);
+
+        // Log memory after multi-step approach
+        memoryMonitor.logMemoryUsage(`${requestType}_multi_step_complete`);
+
+        // Try to free memory
+        this.cleanupRequest(request);
+        memoryMonitor.forceGC();
+
+        return result;
       }
 
       // Standard approach for normal-sized requests
       // Convert the request to a prompt for the LLM
       const prompt = this.createAgentPrompt(request);
+      memoryMonitor.logMemoryUsage(`${requestType}_prompt_created`);
 
       // Get the agent's response
       const llmResponse = await this.llmService.complete({
@@ -1020,13 +1042,28 @@ export class IndexingAgent {
         }
       });
 
+      // Log memory after LLM response
+      memoryMonitor.logMemoryUsage(`${requestType}_llm_response_received`, {
+        responseSize: llmResponse.text.length
+      });
+
       // Extract JSON from the response
       let jsonResponse = this.extractJsonFromResponse(llmResponse.text);
+
+      // Free memory by clearing the full text response
+      if (llmResponse.text.length > 10000) {
+        llmResponse.text = '';
+      }
 
       // Check if the response is potentially truncated by looking for signs of incompleteness
       if (this.isJsonTruncated(jsonResponse)) {
         console.log("Detected truncated JSON response, requesting continuation...");
-        return await this.handleTruncatedResponse<Req, Res>(request, jsonResponse);
+        memoryMonitor.logMemoryUsage(`${requestType}_truncated_response_detected`);
+        const result = await this.handleTruncatedResponse<Req, Res>(request, jsonResponse);
+
+        // Log memory after handling truncated response
+        memoryMonitor.logMemoryUsage(`${requestType}_truncated_response_handled`);
+        return result;
       }
 
       // Parse the final response
@@ -1323,8 +1360,117 @@ export class IndexingAgent {
   }
 
   /**
-   * Determines if a request is likely to produce a large response
+   * Estimate the size of a request in bytes to track memory usage
    */
+  private estimateRequestSize(request: AgentRequest): number {
+    try {
+      let totalSize = 0;
+
+      // Add action type size
+      totalSize += (request.action.toString().length * 2); // Unicode chars are 2 bytes
+
+      // Add context size if present
+      if (request.context) {
+        totalSize += request.context.length * 2;
+      }
+
+      // Handle different request types
+      switch (request.action) {
+        case AgentActionType.EXTRACT_SYMBOLS:
+          const extractRequest = request as ExtractSymbolsRequest;
+          totalSize += extractRequest.data.content.length * 2;
+
+          // Estimate chunks size
+          if (extractRequest.data.chunks) {
+            for (const chunk of extractRequest.data.chunks) {
+              totalSize += (chunk.content?.length || 0) * 2;
+            }
+          }
+          break;
+
+        case AgentActionType.ANALYZE_RELATIONSHIPS:
+          const relRequest = request as AnalyzeRelationshipsRequest;
+          totalSize += (relRequest.data.content?.length || 0) * 2;
+
+          // Estimate symbols size
+          if (relRequest.data.symbols) {
+            totalSize += JSON.stringify(relRequest.data.symbols).length * 2;
+          }
+
+          // Estimate other symbols size
+          if (relRequest.data.otherSymbols) {
+            totalSize += JSON.stringify(relRequest.data.otherSymbols).length * 2;
+          }
+          break;
+
+        case AgentActionType.DESIGN_FILE_CHUNKING:
+          const chunkRequest = request as DesignFileChunkingRequest;
+          totalSize += chunkRequest.data.content.length * 2;
+          totalSize += JSON.stringify(chunkRequest.data.fileAnalysis).length * 2;
+          break;
+
+        default:
+          // For other request types, just stringify the data
+          totalSize += JSON.stringify(request.data || {}).length * 2;
+      }
+
+      return totalSize;
+    } catch (error) {
+      console.error("Error estimating request size:", error);
+      return 0;
+    }
+  }
+
+  /**
+   * Clean up request data to free memory
+   */
+  private cleanupRequest(request: AgentRequest): void {
+    try {
+      // For request types with large content
+      switch (request.action) {
+        case AgentActionType.EXTRACT_SYMBOLS:
+          const extractRequest = request as ExtractSymbolsRequest;
+          // Clear content after use
+          if (extractRequest.data.content && extractRequest.data.content.length > 10000) {
+            extractRequest.data.content = '';
+          }
+
+          // Clear chunk content
+          if (extractRequest.data.chunks) {
+            for (const chunk of extractRequest.data.chunks) {
+              if (chunk.content && chunk.content.length > 5000) {
+                chunk.content = '';
+              }
+            }
+          }
+          break;
+
+        case AgentActionType.ANALYZE_RELATIONSHIPS:
+          const relRequest = request as AnalyzeRelationshipsRequest;
+          // Clear content after use
+          if (relRequest.data.content && relRequest.data.content.length > 10000) {
+            relRequest.data.content = '';
+          }
+          break;
+
+        case AgentActionType.DESIGN_FILE_CHUNKING:
+          const chunkRequest = request as DesignFileChunkingRequest;
+          // Clear content after use
+          if (chunkRequest.data.content && chunkRequest.data.content.length > 10000) {
+            chunkRequest.data.content = '';
+          }
+          break;
+      }
+
+      // Clear context if present and large
+      if (request.context && request.context.length > 10000) {
+        request.context = '';
+      }
+    } catch (error) {
+      console.error("Error cleaning up request:", error);
+    }
+  }
+
   private isLikelyLargeRequest(request: AgentRequest): boolean {
     // Check specific large request types
     switch (request.action) {

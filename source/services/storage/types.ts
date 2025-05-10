@@ -1,43 +1,27 @@
-// src/services/storage/types.ts
-export type StorageKey = string;
-export type StorageValue = string | number | boolean | object | null;
-
-export interface StorageOptions {
-	ttl?: number; // Time to live in seconds
-}
-
+// source/services/storage/types.ts
 export interface StorageService {
-	/**
-	 * Initializes the storage service
-	 */
-	initialize(): Promise<void>;
-
-	/**
-	 * Stores a value with the given key
-	 */
-	set(
-		key: StorageKey,
-		value: StorageValue,
-		options?: StorageOptions,
-	): Promise<void>;
-
-	/**
-	 * Retrieves a value by key
-	 */
-	get<T extends StorageValue>(key: StorageKey): Promise<T | null>;
-
-	/**
-	 * Deletes a value by key
-	 */
-	delete(key: StorageKey): Promise<boolean>;
-
-	/**
-	 * Checks if a key exists
-	 */
-	has(key: StorageKey): Promise<boolean>;
-
-	/**
-	 * Clears all stored values
-	 */
-	clear(): Promise<void>;
+  /**
+   * Initializes the storage service
+   */
+  initialize(): Promise<void>;
+  
+  /**
+   * Saves data to storage
+   */
+  saveData(key: string, data: any): Promise<void>;
+  
+  /**
+   * Loads data from storage
+   */
+  loadData<T>(key: string): Promise<T | null>;
+  
+  /**
+   * Deletes data from storage
+   */
+  deleteData(key: string): Promise<void>;
+  
+  /**
+   * Checks if data exists
+   */
+  exists(key: string): Promise<boolean>;
 }
