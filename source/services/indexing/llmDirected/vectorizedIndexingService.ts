@@ -371,46 +371,89 @@ export class VectorizedIndexingService implements IndexingService {
 	private async generateAndStoreRelationshipEmbeddings(
 		indexedCodebase: IndexedCodebase,
 	): Promise<void> {
+		// Get memory monitor
+		const memoryMonitor = getMemoryMonitor();
+		memoryMonitor.logMemoryUsage('relationship_embeddings_start', {
+			relationshipCount: indexedCodebase.dependencies.length
+		});
+
 		const relationships = indexedCodebase.dependencies;
-		const batchSize = 50;
+		const batchSize = 40; // Using slightly smaller batches to prevent memory spikes
+
+		let batchCount = 0;
+		const totalBatches = Math.ceil(relationships.length / batchSize);
 
 		for (let i = 0; i < relationships.length; i += batchSize) {
+			batchCount++;
 			const batch = relationships.slice(i, i + batchSize);
-			console.log(
-				`Processing relationship embeddings batch ${
-					Math.floor(i / batchSize) + 1
-				}/${Math.ceil(relationships.length / batchSize)}`,
-			);
 
-			// Generate embeddings for the batch
-			const relationshipTexts = batch.map(relationship => {
-				const sourceSymbol = indexedCodebase.symbols[relationship.source];
-				const targetSymbol = indexedCodebase.symbols[relationship.target];
-				return this.createRelationshipText(
-					relationship,
-					sourceSymbol,
-					targetSymbol,
-				);
+			memoryMonitor.logMemoryUsage(`relationship_batch_${batchCount}_start`, {
+				batchCount,
+				totalBatches,
+				batchSize: batch.length
 			});
 
-			const embeddings = await this.embeddingService.generateEmbeddings(
-				relationshipTexts,
+			console.log(
+				`Processing relationship embeddings batch ${batchCount}/${totalBatches}`,
 			);
 
-			// Store embeddings
-			const vectorItems = batch.map((relationship, index) => ({
-				vector: embeddings[index] || [],
-				metadata: {
-					type: 'relationship',
-					source: relationship.source,
-					target: relationship.target,
-					relType: relationship.type,
-					metadata: relationship.metadata || {},
-				},
-			}));
+			try {
+				// Generate embeddings for the batch
+				const relationshipTexts = batch.map(relationship => {
+					const sourceSymbol = indexedCodebase.symbols[relationship.source];
+					const targetSymbol = indexedCodebase.symbols[relationship.target];
+					return this.createRelationshipText(
+						relationship,
+						sourceSymbol,
+						targetSymbol,
+					);
+				});
 
-			await this.vectorStorage.storeItems(vectorItems);
+				const embeddings = await this.embeddingService.generateEmbeddings(
+					relationshipTexts,
+				);
+
+				// Free memory by clearing large text content
+				relationshipTexts.length = 0;
+
+				memoryMonitor.logMemoryUsage(`relationship_batch_${batchCount}_embeddings_generated`);
+
+				// Store embeddings
+				const vectorItems = batch.map((relationship, index) => ({
+					vector: embeddings[index] || [],
+					metadata: {
+						type: 'relationship',
+						source: relationship.source,
+						target: relationship.target,
+						relType: relationship.type,
+						metadata: relationship.metadata || {},
+					},
+				}));
+
+				await this.vectorStorage.storeItems(vectorItems);
+
+				memoryMonitor.logMemoryUsage(`relationship_batch_${batchCount}_embeddings_stored`);
+
+				// Explicitly clear arrays after use
+				embeddings.length = 0;
+
+				// Every few batches, force garbage collection if available
+				if (batchCount % 5 === 0) {
+					memoryMonitor.forceGC();
+				}
+
+			} catch (error) {
+				console.error(`Error processing relationship batch ${batchCount}:`, error);
+				// Continue processing other batches even if one fails
+			}
 		}
+
+		// Final cleanup
+		memoryMonitor.forceGC();
+		memoryMonitor.logMemoryUsage('relationship_embeddings_complete', {
+			relationshipCount: relationships.length,
+			batchesProcessed: batchCount
+		});
 
 		console.log(
 			`Generated and stored embeddings for ${relationships.length} relationships`,
