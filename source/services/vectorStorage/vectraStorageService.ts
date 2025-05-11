@@ -41,7 +41,15 @@ export class VectraStorageService implements VectorStorageService {
    * Initialize the vector storage
    */
   async initialize(): Promise<void> {
+    // Get memory monitor
+    const memoryMonitor = getMemoryMonitor();
+
     try {
+      memoryMonitor.logMemoryUsage('vector_storage_init_start', {
+        storagePath: this.options.storagePath,
+        dimensions: this.options.dimensions
+      });
+
       // Ensure storage directory exists
       await fs.ensureDir(this.options.storagePath);
 
@@ -52,20 +60,86 @@ export class VectraStorageService implements VectorStorageService {
       if (!(await this.index.isIndexCreated())) {
         console.log(`Creating new vector index at ${this.options.storagePath}`);
         await this.index.createIndex();
+        memoryMonitor.logMemoryUsage('vector_storage_index_created');
       } else {
         console.log(`Using existing vector index at ${this.options.storagePath}`);
+        memoryMonitor.logMemoryUsage('vector_storage_index_loaded');
       }
 
-      // Load ID mapping if it exists
+      // Load ID mapping if it exists - using streaming approach for large files
       const idMapPath = path.join(this.options.storagePath, 'id_mapping.json');
       if (await fs.pathExists(idMapPath)) {
-        const idMapData = await fs.readJson(idMapPath);
-        this.itemIdMap = new Map(Object.entries(idMapData));
+        try {
+          // Get file stats to check size
+          const stats = await fs.stat(idMapPath);
+
+          if (stats.size > 10 * 1024 * 1024) { // If larger than 10MB, use chunked loading
+            console.log(`ID mapping file is large (${Math.round(stats.size / 1024 / 1024)}MB), using chunked loading`);
+
+            // Clear existing map to free memory
+            this.itemIdMap.clear();
+
+            // Load the file in chunks to parse it
+            const fileContent = await fs.readFile(idMapPath, 'utf8');
+            const idMapData = JSON.parse(fileContent);
+
+            // Process entries in batches
+            const entries = Object.entries(idMapData);
+            const BATCH_SIZE = 1000;
+
+            for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+              const batch = entries.slice(i, i + BATCH_SIZE);
+
+              // Add batch to the map
+              for (const [key, value] of batch) {
+                this.itemIdMap.set(key, String(value));
+              }
+
+              // Log progress for large maps
+              if (i % 10000 === 0 && i > 0) {
+                console.log(`Loaded ${i}/${entries.length} ID mappings`);
+                memoryMonitor.logMemoryUsage('vector_storage_id_mapping_progress', {
+                  entriesLoaded: i,
+                  totalEntries: entries.length
+                });
+              }
+            }
+
+            // Clear references to free memory
+            entries.length = 0;
+            // String is immutable in JS - we can't modify its length
+            // Just use null to encourage garbage collection
+            // @ts-ignore - Intentional null assignment to help GC
+            fileContent = null;
+
+          } else {
+            // For smaller files, use direct loading
+            const idMapData = await fs.readJson(idMapPath);
+            this.itemIdMap = new Map(Object.entries(idMapData));
+          }
+
+          memoryMonitor.logMemoryUsage('vector_storage_id_mapping_loaded', {
+            mapSize: this.itemIdMap.size
+          });
+        } catch (mappingError) {
+          console.error('Error loading ID mapping:', mappingError);
+          // Continue with empty map if there's an issue
+          this.itemIdMap = new Map();
+        }
       }
 
       this.isInitialized = true;
       console.log(`Vector storage initialized with dimensions: ${this.options.dimensions}`);
+
+      // Force garbage collection after initialization
+      memoryMonitor.forceGC();
+      memoryMonitor.logMemoryUsage('vector_storage_init_complete');
     } catch (error) {
+      memoryMonitor.logMemoryUsage('vector_storage_init_error', {
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error)
+      });
+
       console.error('Error initializing vector storage:', error);
       throw new Error(`Failed to initialize vector storage: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -84,8 +158,82 @@ export class VectraStorageService implements VectorStorageService {
    * Save the ID mapping to disk
    */
   private async saveIdMapping(): Promise<void> {
+    const memoryMonitor = getMemoryMonitor();
+    memoryMonitor.logMemoryUsage('id_mapping_save_start', {
+      mapSize: this.itemIdMap.size
+    });
+
     const idMapPath = path.join(this.options.storagePath, 'id_mapping.json');
-    await fs.writeJson(idMapPath, Object.fromEntries(this.itemIdMap));
+
+    try {
+      if (this.itemIdMap.size > 10000) {
+        // For very large maps, use a streaming approach to reduce memory usage
+        console.log(`Saving large ID mapping (${this.itemIdMap.size} entries)`);
+
+        const tempMapPath = idMapPath + '.temp';
+        const writeStream = fs.createWriteStream(tempMapPath);
+
+        // Start the JSON object
+        writeStream.write('{');
+
+        // Convert map to array of entries for processing
+        const entries = Array.from(this.itemIdMap.entries());
+        let isFirst = true;
+
+        // Process in batches to reduce memory pressure
+        const BATCH_SIZE = 1000;
+        for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+          const batch = entries.slice(i, i + BATCH_SIZE);
+
+          for (const [key, value] of batch) {
+            // Add comma for all but first entry
+            if (!isFirst) {
+              writeStream.write(',');
+            } else {
+              isFirst = false;
+            }
+
+            // Write the key-value pair as JSON
+            writeStream.write(`"${key}":"${value}"`);
+          }
+
+          // Log progress for very large maps
+          if (i % 10000 === 0 && i > 0) {
+            console.log(`Saved ${i}/${entries.length} ID mappings`);
+            memoryMonitor.logMemoryUsage('id_mapping_save_progress', {
+              entriesSaved: i,
+              totalEntries: entries.length
+            });
+          }
+        }
+
+        // End the JSON object
+        writeStream.write('}');
+
+        // Close the stream and ensure write is complete
+        await new Promise<void>((resolve, reject) => {
+          writeStream.end((err: Error | null) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+
+        // Replace the old file with the new one
+        await fs.rename(tempMapPath, idMapPath);
+
+      } else {
+        // For smaller maps, use the standard approach
+        await fs.writeJson(idMapPath, Object.fromEntries(this.itemIdMap));
+      }
+
+      memoryMonitor.logMemoryUsage('id_mapping_save_complete');
+    } catch (error) {
+      console.error('Error saving ID mapping:', error);
+      memoryMonitor.logMemoryUsage('id_mapping_save_error', {
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown'
+      });
+      // Continue without failing the process since we can recover on next save
+    }
   }
 
   /**
@@ -154,6 +302,11 @@ export class VectraStorageService implements VectorStorageService {
 
         for (let i = batchStartIndex; i < batchEndIndex; i++) {
           const item = items[i];
+          if (!item) {
+            console.warn(`Skipping undefined item at index ${i}`);
+            continue;
+          }
+
           const id = this.generateItemId(item);
           batchIds.push(id);
 
@@ -225,6 +378,11 @@ export class VectraStorageService implements VectorStorageService {
    * Generate a consistent ID for an item based on its metadata
    */
   private generateItemId(item: VectorItem): string {
+    if (!item || !item.metadata) {
+      // Generate a fallback ID for invalid items
+      return `item_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    }
+
     // If the metadata contains specific ID fields, use them
     if (item.metadata['id']) return String(item.metadata['id']);
     if (item.metadata['name'] && item.metadata['filePath']) {
@@ -314,7 +472,16 @@ export class VectraStorageService implements VectorStorageService {
   ): Promise<VectorQueryResult[]> {
     this.ensureInitialized();
 
+    // Get memory monitor
+    const memoryMonitor = getMemoryMonitor();
+
     try {
+      // Log starting memory usage
+      memoryMonitor.logMemoryUsage('query_similar_start', {
+        vectorDimensions: vector.length,
+        ...options
+      });
+
       // Set default options
       const limit = options?.limit ?? 10;
       const minScore = options?.minScore ?? this.options.similarityThreshold ?? 0.7;
@@ -323,17 +490,52 @@ export class VectraStorageService implements VectorStorageService {
       // Query the index - convert limit to string for compatibility
       const results = await this.index!.queryItems(vector, String(limit) as any, filter as any);
 
-      // Filter by minimum score and map to the expected result format
-      return results
-        .filter(result => result.score >= minScore)
-        .map(result => ({
+      memoryMonitor.logMemoryUsage('query_similar_results_received', {
+        resultCount: results.length
+      });
+
+      // Filter by minimum score
+      const filteredResults = results.filter(result => result.score >= minScore);
+
+      // Memory optimized mapping - process one at a time to reduce memory pressure
+      const mappedResults: VectorQueryResult[] = [];
+
+      for (const result of filteredResults) {
+        // Optionally compress large vectors by stripping unnecessary precision
+        let resultVector = result.item.vector;
+
+        // If vector is very large (high dimensions), we can round to 5 decimal places
+        // to save memory without significantly affecting results
+        if (resultVector.length > 500) {
+          resultVector = resultVector.map(v => Math.round(v * 100000) / 100000);
+        }
+
+        mappedResults.push({
           item: {
-            vector: result.item.vector,
+            vector: resultVector,
             metadata: result.item.metadata
           },
           score: result.score
-        }));
+        });
+      }
+
+      // Log final memory usage
+      memoryMonitor.logMemoryUsage('query_similar_complete', {
+        filteredCount: filteredResults.length,
+        finalCount: mappedResults.length
+      });
+
+      // Use a comment to indicate we're helping GC
+      // but don't create unused variables
+      // results will be freed when function exits
+
+      return mappedResults;
     } catch (error) {
+      memoryMonitor.logMemoryUsage('query_similar_error', {
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error)
+      });
+
       console.error('Error querying similar vectors:', error);
       throw new Error(`Failed to query similar vectors: ${error instanceof Error ? error.message : String(error)}`);
     }

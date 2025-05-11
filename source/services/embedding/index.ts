@@ -5,5 +5,5 @@ export * from './types.js';
 export * from './openAIEmbeddingService.js';
 
 // Default export
-import { OpenAIEmbeddingService } from './openAIEmbeddingService.js';
+import {ChunkedEmbeddingService as OpenAIEmbeddingService} from './openAIEmbeddingService.js';
 export default OpenAIEmbeddingService;

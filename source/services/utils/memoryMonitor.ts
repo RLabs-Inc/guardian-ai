@@ -117,7 +117,11 @@ export class MemoryMonitor {
    * Get the latest snapshot
    */
   getLatestSnapshot(): MemorySnapshot | null {
-    return this.snapshots.length > 0 ? this.snapshots[this.snapshots.length - 1] : null;
+    if (this.snapshots.length > 0) {
+      const snapshot = this.snapshots[this.snapshots.length - 1];
+      return snapshot || null;
+    }
+    return null;
   }
 
   /**
@@ -165,6 +169,13 @@ export class MemoryMonitor {
 
     const startSnapshot = this.snapshots[startIndex];
     const endSnapshot = this.snapshots[endIndex];
+
+    // Extra safety check to prevent TypeScript errors
+    if (!startSnapshot || !endSnapshot) {
+      this.logHandler('warning', `Cannot compare memory usage: snapshot data missing`);
+      return;
+    }
+
     const rssDiff = endSnapshot.usage.rss - startSnapshot.usage.rss;
     const heapTotalDiff = endSnapshot.usage.heapTotal - startSnapshot.usage.heapTotal;
     const heapUsedDiff = endSnapshot.usage.heapUsed - startSnapshot.usage.heapUsed;

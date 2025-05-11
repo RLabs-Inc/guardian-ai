@@ -2,6 +2,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import {LLMService, LLMRequest, LLMResponse} from './types.js';
 import * as dotenv from 'dotenv';
+import { getMemoryMonitor } from '../utils/memoryMonitor.js';
 
 // Load environment variables
 dotenv.config();
@@ -23,23 +24,46 @@ export class AnthropicService implements LLMService {
 	}
 
 	async complete(request: LLMRequest): Promise<LLMResponse> {
+		const memoryMonitor = getMemoryMonitor();
+
 		try {
+			// Force GC at the start to reclaim memory from previous operations
+			memoryMonitor.forceGC();
+
+			// Record memory usage at start
+			const promptLength = request.prompt ? request.prompt.length : 0;
+			const systemPromptLength = request.systemPrompt ? request.systemPrompt.length : 0;
+
+			memoryMonitor.logMemoryUsage('llm_request_start', {
+				model: request.options?.model || this.defaultModel,
+				promptLength,
+				systemPromptLength,
+				maxTokens: request.options?.maxTokens || 64000
+			});
+
 			const {prompt, systemPrompt, options} = request;
 
-			const response = await this.client.messages.create({
+			// Create a memory-efficient request
+			const apiRequest = {
 				model: options?.model || this.defaultModel,
 				max_tokens: options?.maxTokens || 64000,
 				temperature: options?.temperature || 0.7,
 				system: systemPrompt || 'You are a helpful AI assistant.',
-				messages: [{role: 'user', content: prompt}],
-			});
+				messages: [{role: 'user' as const, content: prompt}],
+			};
+
+			// Call the API
+			const response = await this.client.messages.create(apiRequest);
+
+			memoryMonitor.logMemoryUsage('llm_response_received');
 
 			// First, check if there is content and it's a text block
 			const firstContent = response.content[0];
 			const responseText =
 				firstContent && firstContent.type === 'text' ? firstContent.text : '';
 
-			return {
+			// Create the response object
+			const result = {
 				text: responseText,
 				usage: {
 					promptTokens: response.usage.input_tokens,
@@ -48,7 +72,36 @@ export class AnthropicService implements LLMService {
 						response.usage.input_tokens + response.usage.output_tokens,
 				},
 			};
+
+			// Aggressively clear references to large objects
+			// @ts-ignore - This is intentional to help with memory cleanup
+			response.content = null;
+			// @ts-ignore - This is intentional to help with memory cleanup
+			response.stop_reason = null;
+			// @ts-ignore - This is intentional to help with memory cleanup
+			response.usage = null;
+			// @ts-ignore - This is intentional to help with memory cleanup
+			response.id = null;
+			// @ts-ignore - This is intentional to help with memory cleanup
+			response.model = null;
+			// @ts-ignore - This is intentional to help with memory cleanup
+			response = null;
+
+			memoryMonitor.logMemoryUsage('llm_request_complete', {
+				responseLength: responseText.length,
+				totalTokens: result.usage.totalTokens
+			});
+
+			// Force garbage collection after processing large responses
+			memoryMonitor.forceGC();
+
+			return result;
 		} catch (error: unknown) {
+			memoryMonitor.logMemoryUsage('llm_request_error', {
+				errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+				message: error instanceof Error ? error.message : String(error)
+			});
+
 			throw new Error(`LLM request failed: ${this.getErrorMessage(error)}`);
 		}
 	}
@@ -79,29 +132,64 @@ export class AnthropicService implements LLMService {
 		request: LLMRequest,
 		onText: (text: string) => void,
 	): Promise<LLMResponse> {
+		const memoryMonitor = getMemoryMonitor();
+
 		try {
+			// Record memory usage at start
+			const promptLength = request.prompt ? request.prompt.length : 0;
+			const systemPromptLength = request.systemPrompt ? request.systemPrompt.length : 0;
+
+			memoryMonitor.logMemoryUsage('llm_stream_request_start', {
+				model: request.options?.model || this.defaultModel,
+				promptLength,
+				systemPromptLength,
+				maxTokens: request.options?.maxTokens || 64000
+			});
+
 			const {prompt, systemPrompt, options} = request;
 
+			// Create a memory-efficient request
 			const stream = this.client.messages.stream({
 				model: options?.model || this.defaultModel,
 				max_tokens: options?.maxTokens || 64000,
 				temperature: options?.temperature || 0.7,
 				system: systemPrompt || 'You are a helpful AI assistant.',
-				messages: [{role: 'user', content: prompt}],
+				messages: [{role: 'user' as const, content: prompt}],
 			});
 
-			// Set up event handler for streaming
-			stream.on('text', onText);
+			memoryMonitor.logMemoryUsage('llm_stream_created');
+
+			// Set up memory-optimized event handler for streaming
+			let totalTextLength = 0;
+			const wrappedOnText = (text: string) => {
+				totalTextLength += text.length;
+				// Call the original handler
+				onText(text);
+
+				// Periodically log memory usage on long generations
+				if (totalTextLength % 10000 === 0) {
+					memoryMonitor.logMemoryUsage('llm_stream_progress', {
+						totalTextLength
+					});
+				}
+			};
+
+			stream.on('text', wrappedOnText);
 
 			// Wait for final message
 			const message = await stream.finalMessage();
+
+			memoryMonitor.logMemoryUsage('llm_stream_completed', {
+				totalTextLength
+			});
 
 			// First, check if there is content and it's a text block
 			const firstContent = message.content[0];
 			const responseText =
 				firstContent && firstContent.type === 'text' ? firstContent.text : '';
-
-			return {
+				
+			// Create response object
+			const result = {
 				text: responseText,
 				usage: {
 					promptTokens: message.usage?.input_tokens || 0,
@@ -111,10 +199,34 @@ export class AnthropicService implements LLMService {
 						(message.usage?.output_tokens || 0),
 				},
 			};
+			
+			// Clean up large objects - helps with memory management
+			// @ts-ignore - This is intentional to help with memory cleanup
+			message.content = null;
+			
+			// Try to clean up stream resources
+			try {
+				// @ts-ignore - This is intentional to help with memory cleanup
+				stream.controller.abort();
+			} catch (abortError) {
+				// Ignore abort errors, just trying to free resources
+			}
+			
+			memoryMonitor.logMemoryUsage('llm_stream_cleanup_complete');
+			
+			return result;
 		} catch (error: unknown) {
+			memoryMonitor.logMemoryUsage('llm_stream_error', {
+				errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+				message: error instanceof Error ? error.message : String(error)
+			});
+			
 			throw new Error(
 				`LLM streaming request failed: ${this.getErrorMessage(error)}`,
 			);
+		} finally {
+			// Try to run garbage collection at the end
+			memoryMonitor.forceGC();
 		}
 	}
 
