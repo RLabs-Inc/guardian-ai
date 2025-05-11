@@ -35,16 +35,10 @@ import { getMemoryMonitor } from '../../utils/memoryMonitor.js';
  */
 export class IndexingAgent {
   private llmService: LLMService;
-  // We don't directly use these fields, but keeping them for future use
-  // @ts-ignore
-  private fileSystem: FileSystemService;
-  private storagePrimitives: StoragePrimitives;
-  // @ts-ignore
-  private projectRoot: string;
+  private readonly storagePrimitives: StoragePrimitives;
 
   private patternInterpreter: PatternInterpreter;
   private symbolExtractor: SymbolExtractor;
-
   private relationshipMapper: RelationshipMapper;
 
   constructor(
@@ -53,12 +47,81 @@ export class IndexingAgent {
     projectRoot: string
   ) {
     this.llmService = llmService;
-    this.fileSystem = fileSystem;
-    this.projectRoot = projectRoot;
     this.storagePrimitives = new StoragePrimitives(fileSystem, projectRoot);
     this.patternInterpreter = new PatternInterpreter(this.storagePrimitives);
     this.symbolExtractor = new SymbolExtractor();
     this.relationshipMapper = new RelationshipMapper();
+  }
+
+  /**
+   * Process file content for analysis
+   * @param filePath The path to the file
+   * @returns The file content
+   */
+  async processFileContent(filePath: string): Promise<string> {
+    // Add memory monitoring
+    const memoryMonitor = getMemoryMonitor();
+    memoryMonitor.logMemoryUsage('process_file_content_start', {
+      filePath
+    });
+
+    const content = (await this.storagePrimitives.readFile(filePath)).trim();
+
+    // Log memory usage after file read
+    memoryMonitor.logMemoryUsage('process_file_content_complete', {
+      filePath,
+      contentLength: content.length
+    });
+
+    // Force GC if content is large
+    if (content.length > 100000) { // For files over 100KB
+      memoryMonitor.forceGC();
+    }
+
+    return content;
+  }
+
+  /**
+   * Execute a chunking pattern on file content
+   * @param filePath The path to the file
+   * @param content The file content
+   * @param patternDefinition The chunking pattern definition
+   * @returns An array of content chunks
+   */
+  async executeChunkingPattern(
+    filePath: string,
+    content: string,
+    patternDefinition: any
+  ): Promise<Array<{ content: string; startLine: number; endLine: number; type?: string }>> {
+    return this.patternInterpreter.executeChunkingPattern(filePath, content, patternDefinition);
+  }
+
+  /**
+   * Chunk a file by line count
+   * @param filePath The path to the file
+   * @param linesPerChunk The number of lines per chunk
+   * @param overlap The line overlap between chunks
+   * @returns An array of content chunks
+   */
+  async chunkByLineCount(
+    filePath: string,
+    linesPerChunk: number,
+    overlap?: number
+  ): Promise<Array<{ content: string; startLine: number; endLine: number; type?: string }>> {
+    return this.storagePrimitives.chunkByLineCount(filePath, linesPerChunk, overlap);
+  }
+
+  /**
+   * Chunk a file by pattern
+   * @param filePath The path to the file
+   * @param patterns The patterns to match
+   * @returns An array of content chunks
+   */
+  async chunkByPattern(
+    filePath: string,
+    patterns: Array<{ pattern: RegExp; type: string }>
+  ): Promise<Array<{ content: string; startLine: number; endLine: number; type?: string }>> {
+    return this.storagePrimitives.chunkByPattern(filePath, patterns);
   }
 
   /**
@@ -211,6 +274,22 @@ export class IndexingAgent {
     chunks: Array<{ content: string; startLine: number; endLine: number; type?: string }>
   ): Promise<CodeSymbol[]> {
     try {
+      // Add memory monitoring - use performMemoryCheckpoint instead
+      this.performMemoryCheckpoint('extract_symbols_start', {
+        filePath,
+        chunks: chunks.length,
+        contentSize: content.length
+      });
+
+      // Force garbage collection if we have a large content or many chunks
+      if (content.length > 100000 || chunks.length > 20) {
+        // Use performMemoryCheckpoint with force=true
+        this.performMemoryCheckpoint('large_content_gc', {
+          contentLength: content.length,
+          chunkCount: chunks.length
+        });
+      }
+
       // Get file extension for file type-specific handling
       const extension = path.extname(filePath);
 
@@ -241,19 +320,39 @@ export class IndexingAgent {
         console.log(`Using ${response.data.extractionPatterns.length} LLM-provided extraction patterns for ${filePath}`);
 
         // Use the LLM-provided patterns to extract symbols from chunks
-        for (const chunk of chunks) {
-          for (const pattern of response.data.extractionPatterns) {
-            try {
-              const extractedSymbols = await this.symbolExtractor.extractSymbols(filePath, chunk, pattern);
-              if (extractedSymbols.length > 0) {
-                console.log(`Extracted ${extractedSymbols.length} symbols from chunk ${chunk.startLine}-${chunk.endLine} using pattern type ${pattern.type}`);
-                allSymbols.push(...extractedSymbols);
+        // Process chunks in parallel for better performance
+        const chunkResults = await Promise.all(
+          chunks.map(async (chunk) => {
+            const chunkSymbols: CodeSymbol[] = [];
+
+            // Process each pattern for this chunk
+            const patterns = response.data.extractionPatterns || [];
+            for (const pattern of patterns) {
+              try {
+                const extractedSymbols = await this.symbolExtractor.extractSymbols(filePath, chunk, pattern);
+                if (extractedSymbols.length > 0) {
+                  console.log(`Extracted ${extractedSymbols.length} symbols from chunk ${chunk.startLine}-${chunk.endLine} using pattern type ${pattern.type}`);
+                  chunkSymbols.push(...extractedSymbols);
+                }
+              } catch (extractError) {
+                console.error(`Error applying extraction pattern to chunk:`, extractError);
               }
-            } catch (extractError) {
-              console.error(`Error applying extraction pattern to chunk:`, extractError);
             }
-          }
+
+            return chunkSymbols;
+          })
+        );
+
+        // Combine results from all chunks
+        for (const chunkSymbols of chunkResults) {
+          allSymbols.push(...chunkSymbols);
         }
+
+        // Add memory checkpoint after parallel processing
+        this.performMemoryCheckpoint('parallel_chunk_processing_complete', {
+          filePath,
+          totalSymbolsExtracted: allSymbols.length
+        });
 
         // If we extracted symbols using patterns, combine them with any direct symbols provided by the LLM
         if (allSymbols.length > 0) {
@@ -346,65 +445,97 @@ export class IndexingAgent {
       console.log(`No symbols provided by LLM, using default extraction patterns for ${filePath}`);
       const defaultPatterns = this.symbolExtractor.generateDefaultPatterns(extension);
 
-      for (const chunk of chunks) {
-        for (const pattern of defaultPatterns) {
-          try {
-            const extractedSymbols = await this.symbolExtractor.extractSymbols(filePath, chunk, pattern);
+      // Process chunks in parallel using default patterns
+      const chunkResults = await Promise.all(
+        chunks.map(async (chunk) => {
+          const chunkSymbols: CodeSymbol[] = [];
 
-            // Validate and enhance each symbol to ensure it has the minimum required fields
-            // while preserving any flexibility the LLM might have introduced
-            const validatedSymbols = extractedSymbols.map(symbol => {
-              // Ensure symbol has a name
-              if (!symbol.name) {
-                console.warn(`Symbol missing name, generating placeholder name`);
-                symbol.name = `unnamed_symbol_${Math.random().toString(36).substring(2, 9)}`;
+          // Apply each pattern to this chunk
+          for (const pattern of defaultPatterns) {
+            try {
+              const extractedSymbols = await this.symbolExtractor.extractSymbols(filePath, chunk, pattern);
+
+              // Validate and enhance each symbol to ensure it has the minimum required fields
+              const validatedSymbols = extractedSymbols.map(symbol => {
+                // Ensure symbol has a name
+                if (!symbol.name) {
+                  console.warn(`Symbol missing name, generating placeholder name`);
+                  symbol.name = `unnamed_symbol_${Math.random().toString(36).substring(2, 9)}`;
+                }
+
+                // Ensure symbol has a complete location object
+                if (!symbol.location) {
+                  console.warn(`Symbol ${symbol.name} missing location, creating default location`);
+                  symbol.location = {
+                    filePath: filePath,
+                    startLine: chunk.startLine,
+                    endLine: chunk.endLine,
+                    startColumn: 1,
+                    endColumn: 1
+                  };
+                } else {
+                  // Ensure all location fields are set with reasonable defaults
+                  if (!symbol.location.filePath) {
+                    symbol.location.filePath = filePath;
+                  }
+                  if (!symbol.location.startLine || isNaN(symbol.location.startLine)) {
+                    symbol.location.startLine = chunk.startLine;
+                  }
+                  if (!symbol.location.endLine || isNaN(symbol.location.endLine)) {
+                    symbol.location.endLine = chunk.endLine;
+                  }
+                  if (!symbol.location.startColumn || isNaN(symbol.location.startColumn)) {
+                    symbol.location.startColumn = 1;
+                  }
+                  if (!symbol.location.endColumn || isNaN(symbol.location.endColumn)) {
+                    symbol.location.endColumn = 1;
+                  }
+                }
+
+                return symbol;
+              });
+
+              if (validatedSymbols.length > 0) {
+                chunkSymbols.push(...validatedSymbols);
               }
-
-              // Ensure symbol has a complete location object
-              if (!symbol.location) {
-                console.warn(`Symbol ${symbol.name} missing location, creating default location`);
-                symbol.location = {
-                  filePath: filePath,
-                  startLine: chunk.startLine,
-                  endLine: chunk.endLine,
-                  startColumn: 1,
-                  endColumn: 1
-                };
-              } else {
-                // Ensure all location fields are set with reasonable defaults
-                if (!symbol.location.filePath) {
-                  symbol.location.filePath = filePath;
-                }
-                if (!symbol.location.startLine || isNaN(symbol.location.startLine)) {
-                  symbol.location.startLine = chunk.startLine;
-                }
-                if (!symbol.location.endLine || isNaN(symbol.location.endLine)) {
-                  symbol.location.endLine = chunk.endLine;
-                }
-                if (!symbol.location.startColumn || isNaN(symbol.location.startColumn)) {
-                  symbol.location.startColumn = 1;
-                }
-                if (!symbol.location.endColumn || isNaN(symbol.location.endColumn)) {
-                  symbol.location.endColumn = 1;
-                }
-              }
-
-              return symbol;
-            });
-
-            if (validatedSymbols.length > 0) {
-              allSymbols.push(...validatedSymbols);
+            } catch (extractError) {
+              console.error(`Error applying default extraction pattern to chunk:`, extractError);
             }
-          } catch (extractError) {
-            console.error(`Error applying default extraction pattern to chunk:`, extractError);
           }
-        }
+
+          return chunkSymbols;
+        })
+      );
+
+      // Combine results from all chunks
+      for (const chunkSymbols of chunkResults) {
+        allSymbols.push(...chunkSymbols);
       }
 
+      // Add memory checkpoint after parallel processing
+      this.performMemoryCheckpoint('parallel_default_pattern_processing_complete', {
+        filePath,
+        totalSymbolsExtracted: allSymbols.length
+      });
+
       console.log(`Extracted ${allSymbols.length} symbols using default patterns for ${filePath}`);
+
+      // Add final memory checkpoint using our helper method
+      this.performMemoryCheckpoint('extract_symbols_complete', {
+        filePath,
+        symbolsExtracted: allSymbols.length
+      }, allSymbols.length > 100 || content.length > 50000); // Force GC only for large result sets
+
       return allSymbols;
     } catch (error) {
       console.error(`Error extracting symbols from file ${filePath}:`, error);
+
+      // Add memory monitoring even on error paths
+      this.performMemoryCheckpoint('extract_symbols_error', {
+        filePath,
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown'
+      });
+
       throw error;
     }
   }
@@ -995,8 +1126,15 @@ export class IndexingAgent {
    * Makes a request to the LLM agent and parses the response
    * Handles truncated responses by requesting continuations or using a multi-step approach
    */
+  /**
+   * Makes an agent request with support for pagination to handle large responses
+   * @param request The request to send to the LLM agent
+   * @param maxResponseSize Optional maximum response size in characters before pagination is used
+   * @returns The agent's response data
+   */
   private async makeAgentRequest<Req extends AgentRequest, Res extends AgentResponse>(
-    request: Req
+    request: Req,
+    maxResponseSize: number = 50000
   ): Promise<Res> {
     // Get memory monitor
     const memoryMonitor = getMemoryMonitor();
@@ -1027,9 +1165,15 @@ export class IndexingAgent {
         return result;
       }
 
+      // Add pagination metadata to original request
+      const paginatedRequest: Req & { pagination?: { enabled: boolean } } = {
+        ...request,
+        pagination: { enabled: true }
+      };
+
       // Standard approach for normal-sized requests
       // Convert the request to a prompt for the LLM
-      const prompt = this.createAgentPrompt(request);
+      const prompt = this.createAgentPrompt(paginatedRequest);
       memoryMonitor.logMemoryUsage(`${requestType}_prompt_created`);
 
       // Get the agent's response
@@ -1047,6 +1191,12 @@ export class IndexingAgent {
         responseSize: llmResponse.text.length
       });
 
+      // Force garbage collection after large LLM responses
+      if (llmResponse.text.length > 20000) {
+        console.log(`Large LLM response (${llmResponse.text.length} chars), forcing GC...`);
+        memoryMonitor.forceGC();
+      }
+
       // Extract JSON from the response
       let jsonResponse = this.extractJsonFromResponse(llmResponse.text);
 
@@ -1055,20 +1205,34 @@ export class IndexingAgent {
         llmResponse.text = '';
       }
 
-      // Check if the response is potentially truncated by looking for signs of incompleteness
-      if (this.isJsonTruncated(jsonResponse)) {
-        console.log("Detected truncated JSON response, requesting continuation...");
-        memoryMonitor.logMemoryUsage(`${requestType}_truncated_response_detected`);
-        const result = await this.handleTruncatedResponse<Req, Res>(request, jsonResponse);
-
-        // Log memory after handling truncated response
-        memoryMonitor.logMemoryUsage(`${requestType}_truncated_response_handled`);
-        return result;
-      }
-
-      // Parse the final response
+      // Parse the response
+      let result: Res;
       try {
-        const result = parseAgentResponse<Res>(jsonResponse);
+        result = parseAgentResponse<Res>(jsonResponse);
+
+        // Check if pagination is being used (continuation token present)
+        if (result.data && result.data.continuation === true && result.data.continuation_token) {
+          console.log("Detected paginated response, requesting continuation pages...");
+          memoryMonitor.logMemoryUsage(`${requestType}_paginated_response_detected`);
+
+          // Get all pages and merge them
+          const mergedResult = await this.handlePaginatedResponse<Res>(result);
+
+          // Log memory after handling paginated response
+          memoryMonitor.logMemoryUsage(`${requestType}_pagination_complete`);
+          return mergedResult;
+        }
+
+        // Check if the response is potentially truncated by looking for signs of incompleteness
+        if (this.isJsonTruncated(jsonResponse)) {
+          console.log("Detected truncated JSON response, requesting continuation...");
+          memoryMonitor.logMemoryUsage(`${requestType}_truncated_response_detected`);
+          const result = await this.handleTruncatedResponse<Req, Res>(request, jsonResponse);
+
+          // Log memory after handling truncated response
+          memoryMonitor.logMemoryUsage(`${requestType}_truncated_response_handled`);
+          return result;
+        }
 
         // Log memory after successful response parsing
         memoryMonitor.logMemoryUsage(`${requestType}_response_parsed_success`);
@@ -1150,6 +1314,98 @@ export class IndexingAgent {
         memoryMonitor.clearSnapshots();
       }
     }
+  }
+
+  /**
+   * Handles a paginated response by requesting all pages and merging them
+   * Uses the continuation token pattern for controlled pagination
+   */
+  private async handlePaginatedResponse<Res extends AgentResponse>(
+    initialResponse: Res
+  ): Promise<Res> {
+    // Force garbage collection before starting pagination
+    const memoryMonitor = getMemoryMonitor();
+    memoryMonitor.forceGC();
+
+    let result = { ...initialResponse };
+    let allData: any = { ...initialResponse.data };
+
+    // Remove pagination metadata from the combined result
+    delete allData.continuation;
+    delete allData.continuation_token;
+
+    // Keep track of continuation token for next request
+    let continuationToken = initialResponse.data.continuation_token;
+    let continuationCount = 0;
+    const MAX_CONTINUATIONS = 10;
+
+    // Process all continuation pages
+    while (continuationToken && continuationCount < MAX_CONTINUATIONS) {
+      continuationCount++;
+      console.log(`Requesting continuation page #${continuationCount} with token: ${continuationToken}`);
+
+      try {
+        // Create the continuation request
+        const continuationRequest = {
+          action: 'CONTINUATION' as any,
+          token: continuationToken
+        };
+
+        // Get the continuation page
+        const continuationResponse = await this.llmService.complete({
+          prompt: JSON.stringify(continuationRequest),
+          systemPrompt: this.getContinuationSystemPrompt(),
+          options: {
+            temperature: 0.1, // Even lower temperature for consistency
+            maxTokens: 8000,
+          },
+        });
+
+        // Parse the continuation response
+        const continuationResult = parseAgentResponse<Res>(continuationResponse.text);
+
+        if (continuationResult.success && continuationResult.data) {
+          // Merge arrays and objects from the continuation data
+          Object.keys(continuationResult.data).forEach(key => {
+            // Skip continuation metadata
+            if (key === 'continuation' || key === 'continuation_token') return;
+
+            if (Array.isArray(continuationResult.data[key])) {
+              // For arrays, concatenate
+              if (!allData[key]) allData[key] = [];
+              allData[key] = [...allData[key], ...continuationResult.data[key]];
+            } else if (typeof continuationResult.data[key] === 'object' && continuationResult.data[key] !== null) {
+              // For objects, merge properties
+              allData[key] = { ...allData[key], ...continuationResult.data[key] };
+            } else {
+              // For primitives, use the latest value
+              allData[key] = continuationResult.data[key];
+            }
+          });
+
+          // Check if there are more pages
+          if (continuationResult.data.continuation && continuationResult.data.continuation_token) {
+            continuationToken = continuationResult.data.continuation_token;
+          } else {
+            // No more pages
+            continuationToken = null;
+          }
+        } else {
+          console.error("Failed to get valid continuation page");
+          continuationToken = null;
+        }
+
+        // Clean up after each page to prevent memory growth
+        memoryMonitor.forceGC();
+      } catch (error) {
+        console.error(`Error getting continuation page #${continuationCount}:`, error);
+        continuationToken = null; // Stop on error
+      }
+    }
+
+    // Create the final merged result
+    result.data = allData;
+    return result;
   }
 
   /**
@@ -1591,13 +1847,35 @@ export class IndexingAgent {
 
   /**
    * Analyzes relationships in batches for files with many symbols
+   * Uses memory-adaptive batch sizing to prevent OOM errors
    */
   private async analyzeRelationshipsMultiStep(request: AnalyzeRelationshipsRequest): Promise<AnalyzeRelationshipsResponse> {
     const symbols = request.data.symbols;
     console.log(`Breaking relationship analysis into batches for ${symbols.length} symbols`);
 
-    // Process symbols in batches
-    const BATCH_SIZE = 10;
+    // Get available memory info to adjust batch size dynamically
+    const memoryMonitor = getMemoryMonitor();
+    const snapshot = memoryMonitor.getLatestSnapshot();
+
+    // Adaptive batch sizing based on available memory and number of symbols
+    // Default to 10, but adjust down if memory usage is high or symbols are numerous
+    let BATCH_SIZE = 10;
+
+    if (snapshot && snapshot.usage) {
+      // Calculate memory usage in MB
+      const rssMemoryMB = Math.round(snapshot.usage.rss / 1024 / 1024);
+
+      // Adjust batch size based on current memory use - as memory use increases, batch size decreases
+      if (rssMemoryMB > 1000) {
+        BATCH_SIZE = 3; // Very low batch size for high memory usage
+      } else if (rssMemoryMB > 500) {
+        BATCH_SIZE = 5; // Medium batch size for medium memory usage
+      } else if (symbols.length > 50) {
+        BATCH_SIZE = 8; // Slightly reduced batch size for many symbols
+      }
+
+      console.log(`Using memory-adaptive batch size: ${BATCH_SIZE} (current memory usage: ${rssMemoryMB}MB, symbols: ${symbols.length})`);
+    }
     const allRelationships: any[] = [];
 
     for (let i = 0; i < symbols.length; i += BATCH_SIZE) {
@@ -2057,19 +2335,20 @@ Please provide ONLY the raw continuation part with NO additional explanations.
   }
 
   /**
-   * System prompt for continuation requests
+   * System prompt for continuation requests - supports both truncation recovery and pagination
    */
   private getContinuationSystemPrompt(): string {
-    // Use the same system prompt as for the original request to maintain consistent behavior
-    // but add specialized continuation instructions
     return `
 You are an expert code indexing agent that specializes in analyzing codebases and optimizing indexing strategies.
 Your goal is to help build the most effective representation of code for retrieval and understanding.
 You have deep knowledge of programming languages, code structure, and semantic analysis.
 
-YOUR PREVIOUS RESPONSE WAS TRUNCATED. You must continue exactly where you left off.
+You received one of two types of continuation requests:
 
-CONTINUATION REQUIREMENTS:
+TYPE 1: TRUNCATION RECOVERY
+If the input has JSON structure but appears to be incomplete, this is a truncation recovery request.
+
+TRUNCATION RECOVERY REQUIREMENTS:
 1. Your output must directly continue the truncated response exactly where it left off
 2. Do NOT repeat any information from the original response
 3. Do NOT add explanatory text or markdown formatting around your response
@@ -2078,6 +2357,35 @@ CONTINUATION REQUIREMENTS:
 6. Add closing braces, brackets, or quotes as needed to make the final combined JSON valid
 7. Match the formatting and indentation style of the original response
 8. Focus only on completing the truncated data, not adding new information
+
+TYPE 2: PAGINATION REQUEST
+If the input is a simple request like {"action":"CONTINUATION","token":"some_token"}, this is a pagination request.
+
+PAGINATION REQUIREMENTS:
+1. Return the next page of data in the same format as the original response
+2. Keep your response to a reasonable size (max 100 items for arrays)
+3. Include "continuation":true and "continuation_token":"next_page_token" if more data exists
+4. Omit continuation fields or set "continuation":false for the final page
+5. For paginated array responses, generate completely new array items that would logically follow the previous page
+6. Return complete, valid JSON with the standard response format
+7. You may use the token value to determine which page of data to return
+
+Example paginated response:
+{
+  "action": "ANALYZE_RELATIONSHIPS",
+  "success": true,
+  "data": {
+    "relationships": [
+      {"source": "ComponentA", "target": "ComponentB", "type": "imports"},
+      {"source": "ComponentA", "target": "ComponentC", "type": "renders"}
+    ],
+    "continuation": true,
+    "continuation_token": "page2"
+  }
+}
+
+Respond with PURE JSON with no markdown formatting.`;
+  }
 
 For example, if the original response was truncated like this:
 \`\`\`
@@ -2460,65 +2768,98 @@ For metadata enhancement, focus on:
    * for handling truncated or malformed JSON
    */
   private extractJsonFromResponse(response: string): string {
-    // Log the original response for debugging
+    // Log the original response for debugging (limited length for log clarity)
     console.log("Raw LLM response:", response.substring(0, 500) + (response.length > 500 ? "..." : ""));
 
-    // Try to find JSON object in the response (some LLMs wrap it in ```json``` blocks)
-    const jsonRegex = /```(?:json)?([\s\S]*?)```|(\{[\s\S]*\})/g;
-    const match = jsonRegex.exec(response);
-
-    if (match) {
-      // Return the captured JSON (either from inside code block or direct match)
-      const extracted = (match[1] || match[2] || '').trim();
-      console.log("Extracted JSON:", extracted.substring(0, 200) + (extracted.length > 200 ? "..." : ""));
-      return extracted;
+    // Step 1: First check if the response is already valid JSON
+    try {
+      const trimmed = response.trim();
+      JSON.parse(trimmed);
+      console.log("Response is already valid JSON");
+      return trimmed;
+    } catch (parseError) {
+      // Not valid JSON, continue with extraction attempts
     }
 
-    // If no JSON block found, try more aggressive extraction techniques
-    try {
-      // Step 1: Try to parse the whole response directly
-      try {
-        JSON.parse(response.trim());
-        return response.trim();
-      } catch (parseError) {
-        // Continue to more advanced recovery methods
+    // Step 2: Try to find JSON object in the response (some LLMs wrap it in code blocks)
+    // Look for JSON in markdown code blocks (```json```) or just wrapped in curly braces
+    const jsonCodeBlockRegex = /```(?:json)?([\s\S]*?)```/g;
+    const codeBlockMatch = jsonCodeBlockRegex.exec(response);
+
+    if (codeBlockMatch && codeBlockMatch[1]) {
+      const extracted = codeBlockMatch[1].trim();
+      console.log("Extracted JSON from code block:", extracted.substring(0, 200) + (extracted.length > 200 ? "..." : ""));
+
+      // Verify it's valid JSON or has opening brace (might be truncated)
+      if (extracted.startsWith('{')) {
+        return extracted;
+      }
+    }
+
+    // Step 3: Find the most complete JSON object in the text
+    // This looks for the longest possible valid JSON structure
+    const jsonObjectRegex = /(\{[\s\S]*\})/g;
+    let longestMatch = '';
+    let match;
+
+    // Find all potential JSON objects
+    while ((match = jsonObjectRegex.exec(response)) !== null) {
+      if (match[1].length > longestMatch.length) {
+        // Try to validate if it's valid JSON
+        try {
+          JSON.parse(match[1]);
+          longestMatch = match[1]; // Only store valid JSON
+        } catch (e) {
+          // If it's longer but invalid, still consider it for later repair
+          if (longestMatch === '') {
+            longestMatch = match[1];
+          }
+        }
+      }
+    }
+
+    if (longestMatch) {
+      console.log("Found JSON object match:", longestMatch.substring(0, 200) + (longestMatch.length > 200 ? "..." : ""));
+      return longestMatch;
+    }
+
+    // Step 4: More aggressive extraction for truncated or malformed JSON
+    // Clean up the response and look for JSON-like structures
+    const cleaned = response.trim()
+      .replace(/[\r\n\t]+/g, ' ') // Replace newlines and tabs with spaces
+      .replace(/\s{2,}/g, ' ');   // Replace multiple spaces with a single space
+
+    // Find the first opening brace and last closing brace
+    const jsonStart = cleaned.indexOf('{');
+
+    // If we found an opening brace, try to extract JSON
+    if (jsonStart >= 0) {
+      let jsonEnd = cleaned.lastIndexOf('}');
+
+      // If no closing brace or it appears before the opening brace, assume truncated JSON
+      if (jsonEnd < jsonStart) {
+        jsonEnd = cleaned.length - 1;
+        console.log("Detected potentially truncated JSON (no closing brace)");
       }
 
-      // Step 2: Clean up the response and look for JSON-like structures
-      let cleaned = response.trim()
-        .replace(/[\r\n\t]+/g, ' ') // Replace newlines and tabs with spaces
-        .replace(/\s{2,}/g, ' ');   // Replace multiple spaces with a single space
+      // Extract what looks like JSON
+      const jsonPart = cleaned.substring(jsonStart, jsonEnd + 1);
+      console.log("JSON-like part found:", jsonPart.substring(0, 200) + (jsonPart.length > 200 ? "..." : ""));
 
-      // Step 3: Find the first opening brace and last closing brace
-      const jsonStart = cleaned.indexOf('{');
-      const jsonEnd = cleaned.lastIndexOf('}');
+      // Check if this is valid JSON already
+      try {
+        JSON.parse(jsonPart);
+        return jsonPart;
+      } catch (error) {
+        // Return it for repair attempts in later stages
+        console.log("Extracted JSON-like structure (invalid but will be repaired later)");
+        return jsonPart;
+      }
+    }
 
-      if (jsonStart >= 0 && jsonEnd > jsonStart) {
-        // Extract what looks like JSON
-        const jsonPart = cleaned.substring(jsonStart, jsonEnd + 1);
-        console.log("JSON-like part found:", jsonPart.substring(0, 200) + (jsonPart.length > 200 ? "..." : ""));
-
-        // Step 4: Try to validate and fix common JSON issues
-        try {
-          // Check if this is valid JSON already
-          JSON.parse(jsonPart);
-          return jsonPart;
-        } catch (error) {
-          // JSON repair attempts for truncated responses
-          console.log("Attempting to repair extracted JSON");
-
-          // Step 4.1: Try to make it a valid JSON by checking and repairing structural issues
-          let repairedJson = jsonPart;
-
-          // Analyze brace balance
-          const openBraces = (repairedJson.match(/\{/g) || []).length;
-          const closeBraces = (repairedJson.match(/\}/g) || []).length;
-
-          // Analyze bracket balance
-          const openBrackets = (repairedJson.match(/\[/g) || []).length;
-          const closeBrackets = (repairedJson.match(/\]/g) || []).length;
-
-          // Analyze quote balance (simplified approach)
+    // Step 5: Last resort - return the entire response for repair attempts
+    console.log("No JSON structure found, returning entire response for repair");
+    return response;
           const quoteCount = (repairedJson.match(/"/g) || []).length;
 
           // Fix unbalanced braces, brackets, and quotes
@@ -2862,5 +3203,30 @@ For metadata enhancement, focus on:
       }
       return true;
     });
+  }
+
+  /**
+   * Performs a memory checkpoint with forced cleanup
+   * Use this at critical points in the code where memory pressure could be high
+   * @param checkpointName Name of the checkpoint for logging
+   * @param details Additional details to log with the checkpoint
+   * @param forceGC Whether to force garbage collection (defaults to true)
+   */
+  public performMemoryCheckpoint(checkpointName: string, details: Record<string, any> = {}, forceGC: boolean = true): void {
+    const memoryMonitor = getMemoryMonitor();
+
+    // Log the memory usage at this checkpoint
+    memoryMonitor.logMemoryUsage(`checkpoint_${checkpointName}`, details);
+
+    // Force garbage collection if requested
+    if (forceGC) {
+      memoryMonitor.forceGC();
+    }
+
+    // If we have too many memory snapshots, clear them to prevent memory bloat from the monitor itself
+    if (memoryMonitor.getSnapshots().length > 500) {
+      console.log(`Clearing ${memoryMonitor.getSnapshots().length} memory snapshots to prevent memory bloat`);
+      memoryMonitor.clearSnapshots();
+    }
   }
 }

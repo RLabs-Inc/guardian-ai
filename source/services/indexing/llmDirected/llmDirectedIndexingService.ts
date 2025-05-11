@@ -6,11 +6,14 @@ import {
   IndexingService,
   IndexedCodebase,
   CodeSymbol,
+  CodeDependency,
   IndexingOptions
 } from '../types.js';
 import { FileSystemService, FileSystemFilter } from '../../fileSystem/types.js';
 import { LLMService } from '../../llm/types.js';
 import { IndexingAgent } from './indexingAgent.js';
+import { PatternInterpreter } from './patternInterpreter.js';
+import { StoragePrimitives } from './storagePrimitives.js';
 
 /**
  * Implementation of the LLM-directed code indexing service
@@ -33,24 +36,264 @@ export class LLMDirectedIndexingService implements IndexingService {
     }
   };
 
+  // Cache for file type strategies
+  private fileTypeStrategies: Map<string, {
+    fileAnalysis: any;
+    chunkingStrategy: any;
+  }> = new Map();
+
+  // Statistics for caching metrics
+  private cacheHits: number = 0;
+  private cacheMisses: number = 0;
+
+  // Access to helpers for file operations
+  private patternInterpreter: PatternInterpreter | null = null;
+  private storagePrimitives: StoragePrimitives | null = null;
+
+  /**
+   * Normalizes chunking method strings to a consistent format
+   * @param method The chunking method to normalize
+   * @returns A normalized chunking method string
+   */
+  private normalizeChunkingMethod(method: any): string {
+    // Normalize the chunking method to a consistent format
+    if (!method) return 'line-based'; // Default to line-based chunking
+
+    const methodStr = String(method).toLowerCase();
+
+    // Handle common aliases and variations
+    if (methodStr.includes('function')) return 'function-based';
+    if (methodStr.includes('class')) return 'class-based';
+    if (methodStr.includes('line')) return 'line-based';
+    if (methodStr.includes('fixed')) return 'fixed-size';
+    if (methodStr.includes('section')) return 'section-based';
+    if (methodStr.includes('comment')) return 'comment-based';
+    if (methodStr.includes('whole')) return 'whole-file';
+    if (methodStr.includes('semantic')) return 'semantic';
+
+    // Return a reasonable default
+    return 'line-based';
+  }
+
   constructor(fileSystem: FileSystemService, llmService: LLMService) {
     this.fileSystem = fileSystem;
     this.llmService = llmService;
   }
 
   /**
+   * Initialize helpers after projectRoot is set
+   */
+  private initializeHelpers() {
+    if (!this.projectRoot) {
+      throw new Error('Project root must be set before initializing helpers');
+    }
+
+    // Initialize storage primitives if not already done
+    if (!this.storagePrimitives) {
+      this.storagePrimitives = new StoragePrimitives(this.fileSystem, this.projectRoot);
+    }
+
+    // Initialize pattern interpreter if not already done
+    if (!this.patternInterpreter) {
+      this.patternInterpreter = new PatternInterpreter(this.storagePrimitives);
+    }
+  }
+
+  /**
+   * Get a cached file type strategy or create one for the given extension
+   * This helps avoid redundant LLM calls for similar file types
+   */
+  private async getOrCreateFileTypeStrategy(extension: string, sampleFilePath: string): Promise<{
+    fileAnalysis: any;
+    chunkingStrategy: any;
+  }> {
+    // Check if we already have a strategy for this extension
+    if (this.fileTypeStrategies.has(extension)) {
+      this.cacheHits++;
+      console.log(`Cache hit for ${extension} files (${this.cacheHits} hits, ${this.cacheMisses} misses)`);
+      return this.fileTypeStrategies.get(extension)!;
+    }
+
+    // No cached strategy, need to analyze a sample file
+    this.cacheMisses++;
+    console.log(`Cache miss for ${extension} files, analyzing sample: ${sampleFilePath}`);
+
+    try {
+      if (!this.indexingAgent) {
+        throw new Error('Indexing agent not initialized');
+      }
+
+      // Read the sample file
+      const content = await this.indexingAgent.processFileContent(sampleFilePath);
+
+      // Analyze the file to determine how to best process it
+      const fileAnalysis = await this.indexingAgent.analyzeFile(sampleFilePath, content);
+
+      // Design the chunking strategy
+      const chunkingStrategy = await this.indexingAgent.designFileChunking(
+        sampleFilePath,
+        content,
+        fileAnalysis
+      );
+
+      // Cache the strategy for this extension
+      const strategy = { fileAnalysis, chunkingStrategy };
+      this.fileTypeStrategies.set(extension, strategy);
+
+      console.log(`Created and cached strategy for ${extension} files (${this.fileTypeStrategies.size} extensions cached)`);
+
+      return strategy;
+    } catch (error) {
+      console.error(`Error creating file type strategy for ${extension}:`, error);
+      // Create a default strategy
+      const defaultStrategy = {
+        fileAnalysis: {
+          fileType: extension.slice(1) || 'unknown',
+          language: extension.slice(1) || 'unknown',
+          complexity: 'medium',
+          purpose: 'code',
+          summary: `A ${extension} file`
+        },
+        chunkingStrategy: {
+          chunkingMethod: 'line-based',
+          chunkSizeGuidelines: { linesPerChunk: 100 },
+          overlapStrategy: { overlap: 10 }
+        }
+      };
+
+      // Cache even the default strategy to avoid repeated failures
+      this.fileTypeStrategies.set(extension, defaultStrategy);
+
+      return defaultStrategy;
+    }
+  }
+
+  /**
+   * Process a file using predefined strategy components
+   * This avoids redundant LLM calls for similar files
+   */
+  private async processFileWithStrategy(
+    filePath: string,
+    _fileAnalysis: any, // Renamed with underscore to mark as unused
+    chunkingStrategy: any
+  ): Promise<{
+    symbols: CodeSymbol[];
+    dependencies: CodeDependency[];
+  }> {
+    if (!this.indexingAgent) {
+      throw new Error('Indexing agent not initialized');
+    }
+
+    try {
+      // Read the file content
+      const content = await this.indexingAgent.processFileContent(filePath);
+
+      // Implement the chunking strategy
+      let chunks: Array<{ content: string; startLine: number; endLine: number; type?: string }> = [];
+
+      // Use the pattern from the chunking strategy
+      if (chunkingStrategy.patternDefinition) {
+        try {
+          chunks = await this.indexingAgent.executeChunkingPattern(
+            filePath,
+            content,
+            chunkingStrategy.patternDefinition
+          );
+        } catch (error) {
+          console.error(`Error executing chunking pattern for ${filePath}:`, error);
+          // Fall back to line-based chunking
+          chunks = await this.indexingAgent.chunkByLineCount(filePath, 100);
+        }
+      } else {
+        // Use the legacy approach with predefined strategy
+        const normalizedChunkingMethod = this.normalizeChunkingMethod(chunkingStrategy.chunkingMethod);
+
+        // Implement appropriate chunking based on method
+        switch (normalizedChunkingMethod) {
+          case 'function-based':
+            chunks = await this.indexingAgent.chunkByPattern(filePath, [
+              { pattern: /function\s+\w+|\w+\s*=\s*function|\w+\s*:\s*function|\(\s*\)\s*=>\s*{/, type: 'function' }
+            ]);
+            break;
+          case 'class-based':
+          case 'class_based':
+            chunks = await this.indexingAgent.chunkByPattern(filePath, [
+              { pattern: /class\s+\w+/, type: 'class' },
+              { pattern: /interface\s+\w+/, type: 'interface' }
+            ]);
+            break;
+          case 'fixed-size':
+          case 'fixed_size':
+          case 'line-based':
+          case 'line_based':
+          default:
+            // Get chunking parameters or use defaults
+            const linesPerChunk = chunkingStrategy.chunkSizeGuidelines?.linesPerChunk || 100;
+            const overlap = chunkingStrategy.overlapStrategy?.overlap || 10;
+            chunks = await this.indexingAgent.chunkByLineCount(filePath, linesPerChunk, overlap);
+            break;
+        }
+      }
+
+      // Extract symbols from chunks
+      const symbols = await this.indexingAgent.extractSymbols(filePath, content, chunks);
+
+      // Analyze relationships between symbols
+      const dependencies = await this.indexingAgent.analyzeRelationships(filePath, content, symbols);
+
+      // Clean up resources to prevent memory leaks
+      this.cleanupFileResources(filePath);
+
+      return { symbols, dependencies };
+    } catch (error) {
+      console.error(`Error processing file ${filePath} with strategy:`, error);
+
+      // Still clean up resources even on error
+      try {
+        this.cleanupFileResources(filePath);
+      } catch (cleanupError) {
+        console.error(`Error during cleanup for ${filePath}:`, cleanupError);
+      }
+
+      throw error;
+    }
+  }
+
+  /**
    * Index a codebase using LLM-directed strategy
    */
+  /**
+   * Cleanup resources after processing a file to prevent memory leaks
+   */
+  private cleanupFileResources(filePath: string): void {
+    // Clear file-specific caches
+    if (this.storagePrimitives) {
+      // Remove file content from cache
+      this.storagePrimitives.clearFileContent(filePath);
+
+      // Remove chunks from cache
+      this.storagePrimitives.clearFileChunks(filePath);
+    }
+
+    // Force garbage collection
+    const memoryMonitor = getMemoryMonitor();
+    memoryMonitor.forceGC();
+
+    console.log(`Cleaned up resources for file: ${filePath}`);
+  }
+
   async indexCodebase(
     projectPath: string,
     options?: IndexingOptions
   ): Promise<IndexedCodebase> {
     try {
       console.log(`Starting LLM-directed indexing of ${projectPath}`);
+      // Set project root only once
       this.projectRoot = projectPath;
 
-      // Initialize the indexing agent
+      // Initialize the indexing agent and helpers
       this.indexingAgent = new IndexingAgent(this.llmService, this.fileSystem, projectPath);
+      this.initializeHelpers();
 
       // Initialize fresh index
       this.indexedCodebase = {
@@ -74,11 +317,24 @@ export class LLMDirectedIndexingService implements IndexingService {
 
       // Step 2: Get LLM to analyze the codebase
       console.log('Getting LLM analysis of codebase...');
+
+      // Add memory checkpoint before the LLM-heavy operation
+      this.indexingAgent.performMemoryCheckpoint('before_analyze_codebase', {
+        fileTypesCount: Object.keys(fileTypes).length,
+        dirCount: Object.keys(directoryStructure).length,
+        sampleFilesCount: sampleFiles.length
+      });
+
       const codebaseAnalysis = await this.indexingAgent.analyzeCodebase(
         fileTypes,
         directoryStructure,
         sampleFiles
       );
+
+      // Add memory checkpoint after the LLM operation
+      this.indexingAgent.performMemoryCheckpoint('after_analyze_codebase', {
+        analysisKeys: Object.keys(codebaseAnalysis).join(',')
+      });
 
       // Log the structure for debugging
       console.log('Codebase analysis structure:',
@@ -86,6 +342,13 @@ export class LLMDirectedIndexingService implements IndexingService {
 
       // Step 3: Design indexing strategy
       console.log('Designing indexing strategy...');
+
+      // Add memory checkpoint before this LLM-heavy operation
+      this.indexingAgent.performMemoryCheckpoint('before_design_strategy', {
+        codebaseAnalysisSize: JSON.stringify(codebaseAnalysis).length,
+        maxMemoryUsage: options?.maxFiles ? options.maxFiles * 0.5 : 'undefined'
+      });
+
       const indexingStrategy = await this.indexingAgent.designIndexingStrategy(
         codebaseAnalysis,
         {
@@ -93,6 +356,11 @@ export class LLMDirectedIndexingService implements IndexingService {
           maxProcessingTime: 600 // 10 minutes
         }
       );
+
+      // Add memory checkpoint after the LLM operation
+      this.indexingAgent.performMemoryCheckpoint('after_design_strategy', {
+        strategySize: JSON.stringify(indexingStrategy).length
+      });
 
       // Log the strategy structure for debugging
       console.log('Indexing strategy structure:',
@@ -199,28 +467,115 @@ export class LLMDirectedIndexingService implements IndexingService {
         ? files.slice(0, options.maxFiles)
         : files;
 
-      // Step 6: Process each file using the LLM-directed approach
+      // Step 6: Group files by extension for more efficient processing
+      const filesByExtension: Record<string, string[]> = {};
       for (const file of filesToProcess) {
         if (!file.isDirectory) {
-          try {
-            console.log(`Processing file: ${file.path}`);
-            const { symbols, dependencies } = await this.indexingAgent.processFile(
-              path.relative(projectPath, file.path)
-            );
-
-            // Add symbols to the index
-            for (const symbol of symbols) {
-              const symbolId = `${symbol.name}:${symbol.location.filePath}:${symbol.location.startLine}`;
-              this.indexedCodebase.symbols[symbolId] = symbol;
-            }
-
-            // Add dependencies to the index
-            this.indexedCodebase.dependencies.push(...dependencies);
-          } catch (error) {
-            console.warn(`Error processing file ${file.path}:`, error);
-            // Continue with next file
+          const extension = path.extname(file.path).toLowerCase();
+          if (!filesByExtension[extension]) {
+            filesByExtension[extension] = [];
           }
+          filesByExtension[extension].push(path.relative(projectPath, file.path));
         }
+      }
+
+      console.log(`Files grouped by ${Object.keys(filesByExtension).length} extensions: ${Object.keys(filesByExtension).join(', ')}`);
+
+      // Process files by extension to leverage cached strategies
+      for (const [extension, filePaths] of Object.entries(filesByExtension)) {
+        console.log(`Processing ${filePaths.length} ${extension} files...`);
+
+        // Add memory checkpoint before processing each file extension batch
+        this.indexingAgent.performMemoryCheckpoint('before_extension_batch', {
+          extension,
+          fileCount: filePaths.length
+        });
+
+        // First, get the strategy for this file type to reuse for all files
+        const sampleFilePath = filePaths[0]; // Use the first file as sample
+        if (!sampleFilePath) {
+          console.warn(`No sample file for extension ${extension}, skipping batch`);
+          continue;
+        }
+        const strategy = await this.getOrCreateFileTypeStrategy(extension, sampleFilePath);
+
+        // Use parallel processing for files of this extension
+        // Limit concurrency to avoid excessive memory usage
+        const parallelProcessLimit = 3; // Process 3 files in parallel
+        let extensionProcessedCount = 0;
+        let totalProcessed = 0;
+
+        console.log(`Using parallel processing with concurrency of ${parallelProcessLimit} for ${extension} files`);
+
+        // Process files in batches to limit concurrency
+        for (let i = 0; i < filePaths.length; i += parallelProcessLimit) {
+          const currentBatch = filePaths.slice(i, i + parallelProcessLimit);
+
+          // Process this batch in parallel
+          const processingPromises = currentBatch.map(async (relativePath) => {
+            try {
+              console.log(`Started processing file ${++extensionProcessedCount}/${filePaths.length}: ${relativePath}`);
+
+              // Process file with the shared strategy
+              const result = await this.processFileWithStrategy(
+                relativePath,
+                strategy.fileAnalysis,
+                strategy.chunkingStrategy
+              );
+
+              return {
+                path: relativePath,
+                success: true,
+                result
+              };
+            } catch (error) {
+              console.warn(`Error processing file ${relativePath}:`, error);
+              return {
+                path: relativePath,
+                success: false,
+                error
+              };
+            }
+          });
+
+          // Wait for all files in this batch to complete
+          const batchResults = await Promise.all(processingPromises);
+
+          // Process results and add to index
+          for (const result of batchResults) {
+            totalProcessed++;
+
+            if (result.success && result.result) {
+              const { symbols, dependencies } = result.result;
+
+              // Add symbols to the index
+              for (const symbol of symbols) {
+                const symbolId = `${symbol.name}:${symbol.location.filePath}:${symbol.location.startLine}`;
+                this.indexedCodebase.symbols[symbolId] = symbol;
+              }
+
+              // Add dependencies to the index
+              this.indexedCodebase.dependencies.push(...dependencies);
+
+              console.log(`Completed processing file ${result.path} (${totalProcessed}/${filePaths.length})`);
+            }
+          }
+
+          // Add memory checkpoint after each parallel batch
+          this.indexingAgent.performMemoryCheckpoint('parallel_batch_complete', {
+            extension,
+            batchSize: currentBatch.length,
+            totalProcessed,
+            total: filePaths.length
+          }, true); // Force GC cleanup after each batch
+        }
+
+        // Add memory checkpoint after completing each file extension batch
+        this.indexingAgent.performMemoryCheckpoint('after_extension_batch', {
+          extension,
+          filesProcessed: totalProcessed,
+          totalInBatch: filePaths.length
+        }, true); // Force GC cleanup after each extension batch
       }
 
       // Store list of indexed files
@@ -233,8 +588,13 @@ export class LLMDirectedIndexingService implements IndexingService {
         totalFiles: this.indexedCodebase.files.length,
         totalSymbols: Object.keys(this.indexedCodebase.symbols).length,
         totalDependencies: this.indexedCodebase.dependencies.length,
-        lastIndexed: new Date()
+        lastIndexed: new Date(),
+        cacheHits: this.cacheHits,
+        cacheMisses: this.cacheMisses,
       };
+
+      // Log cache statistics
+      console.log(`File type strategy cache: ${this.cacheHits} hits, ${this.cacheMisses} misses, ${this.fileTypeStrategies.size} cached extensions`);
 
       // Store the index
       await this.saveIndex();
@@ -660,8 +1020,13 @@ export class LLMDirectedIndexingService implements IndexingService {
         totalFiles: this.indexedCodebase.files.length,
         totalSymbols: Object.keys(this.indexedCodebase.symbols).length,
         totalDependencies: this.indexedCodebase.dependencies.length,
-        lastIndexed: new Date()
+        lastIndexed: new Date(),
+        cacheHits: this.cacheHits,
+        cacheMisses: this.cacheMisses,
       };
+
+      // Log cache statistics
+      console.log(`File type strategy cache: ${this.cacheHits} hits, ${this.cacheMisses} misses, ${this.fileTypeStrategies.size} cached extensions`);
 
       // Save the updated index
       await this.saveIndex();

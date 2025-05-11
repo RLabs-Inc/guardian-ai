@@ -24,6 +24,32 @@ export class StoragePrimitives {
 		this.projectRoot = projectRoot;
 	}
 
+	/**
+	 * Clears the cached content for a file to free memory
+	 */
+	clearFileContent(filePath: string): void {
+		const relativePath = path.isAbsolute(filePath)
+			? path.relative(this.projectRoot, filePath)
+			: filePath;
+
+		if (this.fileContents.has(relativePath)) {
+			this.fileContents.delete(relativePath);
+		}
+	}
+
+	/**
+	 * Clears the cached chunks for a file to free memory
+	 */
+	clearFileChunks(filePath: string): void {
+		const relativePath = path.isAbsolute(filePath)
+			? path.relative(this.projectRoot, filePath)
+			: filePath;
+
+		if (this.chunks.has(relativePath)) {
+			this.chunks.delete(relativePath);
+		}
+	}
+
 	// --- FILE PROCESSING PRIMITIVES ---
 
 	/**

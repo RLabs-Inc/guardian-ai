@@ -25,10 +25,19 @@ export interface AgentRequest {
 
 // Base structure for agent responses
 export interface AgentResponse {
-  action: AgentActionType;
+  action: AgentActionType | 'CONTINUATION';
   success: boolean;
   message?: string;
   data?: any;
+}
+
+// Pagination-aware response type
+export interface PaginatedResponse extends AgentResponse {
+  data: {
+    continuation?: boolean;
+    continuation_token?: string;
+    [key: string]: any;
+  }
 }
 
 // Request for initial codebase analysis
@@ -475,6 +484,37 @@ function fixJsonSyntax(json: string): string {
   fixedJson = fixedJson.replace(/\/\*[\s\S]*?\*\//g, '');
 
   return fixedJson;
+}
+
+/**
+ * Utility to detect if a JSON is likely to be too large and should be paginated
+ * @param data The data object to evaluate
+ * @param maxSize Optional maximum size threshold in characters
+ * @returns Boolean indicating if pagination is recommended
+ */
+export function shouldPaginateResponse(data: any, maxSize: number = 50000): boolean {
+  try {
+    // Stringify the data to estimate its size
+    const jsonString = JSON.stringify(data);
+
+    // Check if it exceeds the threshold
+    if (jsonString.length > maxSize) {
+      return true;
+    }
+
+    // Check if it has many array elements that could be split
+    for (const key in data) {
+      if (Array.isArray(data[key]) && data[key].length > 100) {
+        return true;
+      }
+    }
+
+    return false;
+  } catch (error) {
+    // If we can't stringify, assume it's complex enough to warrant pagination
+    console.warn("Error checking pagination need:", error);
+    return true;
+  }
 }
 
 /**
