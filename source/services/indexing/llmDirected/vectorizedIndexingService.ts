@@ -321,7 +321,7 @@ export class VectorizedIndexingService implements IndexingService {
 		});
 
 		const symbols = Object.values(indexedCodebase.symbols);
-		const batchSize = 50; // Using smaller batches (reduced from 100) to prevent memory spikes
+		const batchSize = 25; // Reduced batch size from 50 to 25 for better memory efficiency
 
 		let batchCount = 0;
 		const totalBatches = Math.ceil(symbols.length / batchSize);
@@ -341,51 +341,82 @@ export class VectorizedIndexingService implements IndexingService {
 			);
 
 			try {
-				// Generate embeddings for the batch
-				const symbolTexts = batch.map(symbol => this.createSymbolText(symbol));
-
-				// Memory efficient approach - clear batch references after use
-				const embeddings = await this.embeddingService.generateEmbeddings(symbolTexts);
-
-				// Free memory by clearing large text content
-				symbolTexts.length = 0;
-
-				memoryMonitor.logMemoryUsage(`symbol_batch_${batchCount}_embeddings_generated`);
-
-				// Store embeddings
-				const vectorItems = batch.map((symbol, index) => ({
-					vector: embeddings[index] || [],
-					metadata: {
-						type: 'symbol',
-						symbolId: `${symbol.name}:${symbol.location.filePath}:${symbol.location.startLine}`,
-						name: symbol.name,
-						symbolType: symbol.type,
-						filePath: symbol.location.filePath,
-					},
-				}));
-
-				await this.vectorStorage.storeItems(vectorItems);
-
-				memoryMonitor.logMemoryUsage(`symbol_batch_${batchCount}_embeddings_stored`);
-
-				// Clean up large objects to free memory
-				batch.forEach(symbol => {
-					if (symbol.content && symbol.content.length > 1000) {
-						symbol.content = '';
+				// Process in smaller micro-batches for improved memory management
+				const microBatchSize = 5; // Process just 5 items at a time
+				const microBatches = Math.ceil(batch.length / microBatchSize);
+				
+				// Store results from all micro-batches
+				const allVectorItems = [];
+				
+				// Process each micro-batch
+				for (let j = 0; j < batch.length; j += microBatchSize) {
+					const microBatch = batch.slice(j, j + microBatchSize);
+					const microBatchNum = Math.floor(j / microBatchSize) + 1;
+					
+					console.log(`Processing micro-batch ${microBatchNum}/${microBatches} of batch ${batchCount}`);
+					
+					// Generate embeddings for the micro-batch - one at a time for better memory control
+					const embeddings = [];
+					
+					for (const symbol of microBatch) {
+						try {
+							// Process symbols one at a time to minimize memory pressure
+							const symbolText = this.createSymbolText(symbol);
+							const embedding = await this.embeddingService.generateEmbedding(symbolText);
+							embeddings.push(embedding);
+							
+							// Create vector item immediately after processing each symbol
+							allVectorItems.push({
+								vector: embedding,
+								metadata: {
+									type: 'symbol',
+									symbolId: `${symbol.name}:${symbol.location.filePath}:${symbol.location.startLine}`,
+									name: symbol.name,
+									symbolType: symbol.type,
+									filePath: symbol.location.filePath,
+								},
+							});
+							
+							// Clear symbol content immediately after use
+							if (symbol.content && symbol.content.length > 500) {
+								symbol.content = '';
+							}
+						} catch (microError) {
+							console.error(`Error generating embedding for symbol in micro-batch ${microBatchNum}:`, microError);
+						}
 					}
-				});
-
-				// Explicitly clear arrays after use
-				embeddings.length = 0;
-
-				// Every few batches, run garbage collection if possible
-				if (batchCount % 5 === 0) {
+					
+					// Force garbage collection after each micro-batch
 					memoryMonitor.forceGC();
+					
+					// Add a small delay to allow memory to be reclaimed
+					await new Promise(resolve => setTimeout(resolve, 50));
 				}
+
+				// Store all vector items from this batch
+				if (allVectorItems.length > 0) {
+					memoryMonitor.logMemoryUsage(`symbol_batch_${batchCount}_before_storage`, {
+						vectorItemCount: allVectorItems.length
+					});
+					
+					await this.vectorStorage.storeItems(allVectorItems);
+					
+					memoryMonitor.logMemoryUsage(`symbol_batch_${batchCount}_embeddings_stored`);
+				}
+				
+				// Clear references to help garbage collection
+				allVectorItems.length = 0;
+				
+				// Run garbage collection after every batch
+				memoryMonitor.forceGC();
+				
+				// Add a small delay between batches to allow memory to be reclaimed
+				await new Promise(resolve => setTimeout(resolve, 100));
 
 			} catch (error) {
 				console.error(`Error processing symbol batch ${batchCount}:`, error);
 				// Continue processing other batches even if one fails
+				memoryMonitor.forceGC();
 			}
 		}
 
@@ -414,7 +445,7 @@ export class VectorizedIndexingService implements IndexingService {
 		});
 
 		const relationships = indexedCodebase.dependencies;
-		const batchSize = 40; // Using slightly smaller batches to prevent memory spikes
+		const batchSize = 20; // Reduced batch size from 40 to 20 for better memory management
 
 		let batchCount = 0;
 		const totalBatches = Math.ceil(relationships.length / batchSize);
@@ -434,53 +465,87 @@ export class VectorizedIndexingService implements IndexingService {
 			);
 
 			try {
-				// Generate embeddings for the batch
-				const relationshipTexts = batch.map(relationship => {
-					const sourceSymbol = indexedCodebase.symbols[relationship.source];
-					const targetSymbol = indexedCodebase.symbols[relationship.target];
-					return this.createRelationshipText(
-						relationship,
-						sourceSymbol,
-						targetSymbol,
-					);
-				});
-
-				const embeddings = await this.embeddingService.generateEmbeddings(
-					relationshipTexts,
-				);
-
-				// Free memory by clearing large text content
-				relationshipTexts.length = 0;
-
-				memoryMonitor.logMemoryUsage(`relationship_batch_${batchCount}_embeddings_generated`);
-
-				// Store embeddings
-				const vectorItems = batch.map((relationship, index) => ({
-					vector: embeddings[index] || [],
-					metadata: {
-						type: 'relationship',
-						source: relationship.source,
-						target: relationship.target,
-						relType: relationship.type,
-						metadata: relationship.metadata || {},
-					},
-				}));
-
-				await this.vectorStorage.storeItems(vectorItems);
-
-				memoryMonitor.logMemoryUsage(`relationship_batch_${batchCount}_embeddings_stored`);
-
-				// Explicitly clear arrays after use
-				embeddings.length = 0;
-
-				// Every few batches, force garbage collection if available
-				if (batchCount % 5 === 0) {
+				// Use micro-batches similar to symbol processing
+				const microBatchSize = 4; // Even smaller micro-batches for relationships
+				const microBatches = Math.ceil(batch.length / microBatchSize);
+				
+				// Store all vector items from micro-batches
+				const allVectorItems = [];
+				
+				// Process each micro-batch
+				for (let j = 0; j < batch.length; j += microBatchSize) {
+					const microBatch = batch.slice(j, j + microBatchSize);
+					const microBatchNum = Math.floor(j / microBatchSize) + 1;
+					
+					console.log(`Processing relationship micro-batch ${microBatchNum}/${microBatches} of batch ${batchCount}`);
+					
+					// Process each relationship individually
+					for (const relationship of microBatch) {
+						try {
+							const sourceSymbol = indexedCodebase.symbols[relationship.source];
+							const targetSymbol = indexedCodebase.symbols[relationship.target];
+							
+							// Generate text and embedding one at a time
+							const relationshipText = this.createRelationshipText(
+								relationship,
+								sourceSymbol,
+								targetSymbol,
+							);
+							
+							const embedding = await this.embeddingService.generateEmbedding(relationshipText);
+							
+							// Create and store vector item immediately
+							allVectorItems.push({
+								vector: embedding,
+								metadata: {
+									type: 'relationship',
+									source: relationship.source,
+									target: relationship.target,
+									relType: relationship.type,
+									metadata: relationship.metadata || {},
+								},
+							});
+							
+							// Add memory checkpoint after each relationship
+							if (j % 2 === 0) {
+								memoryMonitor.logMemoryUsage(`relationship_processing_checkpoint`, {
+									batch: batchCount,
+									microBatch: microBatchNum,
+									processed: j
+								});
+							}
+						} catch (microError) {
+							console.error(`Error processing relationship in micro-batch ${microBatchNum}:`, microError);
+						}
+					}
+					
+					// Force garbage collection after each micro-batch
 					memoryMonitor.forceGC();
+					
+					// Add a small delay to help with memory reclamation
+					await new Promise(resolve => setTimeout(resolve, 50));
 				}
+
+				// Store all vector items from this batch
+				if (allVectorItems.length > 0) {
+					await this.vectorStorage.storeItems(allVectorItems);
+					
+					memoryMonitor.logMemoryUsage(`relationship_batch_${batchCount}_embeddings_stored`);
+				}
+				
+				// Explicitly clear arrays to free memory
+				allVectorItems.length = 0;
+				
+				// Force garbage collection after every batch
+				memoryMonitor.forceGC();
+				
+				// Add a small delay between batches for better memory management
+				await new Promise(resolve => setTimeout(resolve, 100));
 
 			} catch (error) {
 				console.error(`Error processing relationship batch ${batchCount}:`, error);
 				// Continue processing other batches even if one fails
+				memoryMonitor.forceGC();
 			}
 		}
 

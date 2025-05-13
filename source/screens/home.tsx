@@ -1,16 +1,17 @@
-// src/screens/home.tsx
+// source/screens/home.tsx
 import React, {useState, useEffect} from 'react';
-import {Box, Spacer} from 'ink';
+import {Box, Spacer, useInput} from 'ink';
 import SelectInput from 'ink-select-input';
 import {Text as ThemedText} from '../components/common/Text.js';
 import Spinner from 'ink-spinner';
+import DirectorySelector from '../components/common/DirectorySelector.js';
 import path from 'path';
 import os from 'os';
-// import {useTheme} from '../themes/context.js';
+import {useTheme} from '../themes/context.js';
+import * as fs from 'fs-extra';
 
 interface HomeScreenProps {
-	onSelectCommand: (command: string) => void;
-	projectPath?: string;
+	onSelectCommand: (command: string, options?: any) => void;
 	isLoading?: boolean;
 	loadingMessage?: string;
 }
@@ -22,23 +23,26 @@ interface CustomItem {
 	description?: string;
 }
 
-// Define custom props for item component
-interface CustomItemProps {
-	isSelected: boolean;
-	label: string;
-	description?: string;
-}
-
 const HomeScreen: React.FC<HomeScreenProps> = ({
 	onSelectCommand,
-	projectPath,
 	isLoading = false,
 	loadingMessage = 'Loading...',
 }) => {
-	// const {currentTheme} = useTheme();
+	const {currentTheme} = useTheme();
 	const [currentTime, setCurrentTime] = useState(new Date());
+	const [showDirectorySelector, setShowDirectorySelector] = useState(false);
+	const [projectDirectory, setProjectDirectory] = useState<string>('');
+	const [hasGuardianIndex, setHasGuardianIndex] = useState(false);
+	const [systemInfo] = useState({
+		os: os.type(),
+		arch: os.arch(),
+		node: process.version,
+		memory: Math.round(os.totalmem() / (1024 * 1024 * 1024)),
+	});
 
 	// Update time every minute
+	// This useEffect is actually necessary as it sets up an interval timer
+	// that needs to be cleaned up when the component unmounts
 	useEffect(() => {
 		const timer = setInterval(() => {
 			setCurrentTime(new Date());
@@ -46,7 +50,53 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 		return () => clearInterval(timer);
 	}, []);
 
+	// Check if project directory has Guardian index
+	const checkGuardianIndex = async (dirPath: string) => {
+		if (dirPath) {
+			const indexDir = path.join(dirPath, '.guardian-ai', 'index');
+			const exists = await fs.pathExists(indexDir);
+			setHasGuardianIndex(exists);
+			return exists;
+		} else {
+			setHasGuardianIndex(false);
+			return false;
+		}
+	};
+
+	// Handle keyboard shortcuts
+	useInput((_, key) => {
+		if (key.escape && showDirectorySelector) {
+			setShowDirectorySelector(false);
+		}
+	});
+
+	// Handle directory selection
+	const handleDirectorySelected = async (selectedDirectory: string) => {
+		setProjectDirectory(selectedDirectory);
+		await checkGuardianIndex(selectedDirectory);
+		setShowDirectorySelector(false);
+	};
+
+	// Handle directory selection cancellation
+	const handleDirectorySelectCancel = () => {
+		setShowDirectorySelector(false);
+	};
+
+	// Handle command selection with project directory
+	const handleCommandSelect = (item: {value: string}) => {
+		if (item.value === 'select-directory') {
+			setShowDirectorySelector(true);
+		} else {
+			onSelectCommand(item.value, {projectPath: projectDirectory});
+		}
+	};
+
 	const items: CustomItem[] = [
+		{
+			label: projectDirectory ? 'Change Project Directory' : 'Select Project Directory',
+			value: 'select-directory',
+			description: projectDirectory ? `Current: ${path.basename(projectDirectory)}` : 'Choose a directory to work with',
+		},
 		{
 			label: 'Initialize Project',
 			value: 'init',
@@ -55,7 +105,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 		{
 			label: 'Analyze Codebase',
 			value: 'analyze',
-			description: 'Index and analyze the current codebase',
+			description: hasGuardianIndex 
+				? 'Update the existing semantic index (incremental)' 
+				: 'Create a new semantic index of the codebase',
 		},
 		{
 			label: 'Ask a Question',
@@ -69,24 +121,58 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 		},
 	];
 
+	if (showDirectorySelector) {
+		return (
+			<DirectorySelector
+				initialPath={projectDirectory || process.cwd()}
+				onSelect={handleDirectorySelected}
+				onCancel={handleDirectorySelectCancel}
+			/>
+		);
+	}
+
 	return (
 		<Box flexDirection="column" padding={1}>
 			{/* Header */}
-			<Box marginBottom={1} borderStyle="single" borderColor="green" padding={1}>
-				<ThemedText variant="highlight">
-					GuardianAI - Codebase Steward
-				</ThemedText>
+			<Box 
+				marginBottom={1} 
+				borderStyle="single" 
+				borderColor={currentTheme.colors.primary} 
+				padding={1}
+			>
+				<ThemedText variant="highlight">GuardianAI - Codebase Steward</ThemedText>
 				<Spacer />
 				<ThemedText variant="dim">{currentTime.toLocaleTimeString()}</ThemedText>
 			</Box>
 
 			{/* Project info if available */}
-			{projectPath && (
-				<Box marginBottom={1} flexDirection="column">
+			{projectDirectory && (
+				<Box 
+					marginBottom={1} 
+					flexDirection="column"
+					borderStyle="single"
+					borderColor={currentTheme.colors.dimText}
+					padding={1}
+				>
 					<ThemedText variant="highlight">Current Project:</ThemedText>
-					<ThemedText>
-						{path.basename(projectPath)} ({projectPath})
-					</ThemedText>
+					<Box>
+						<ThemedText color={currentTheme.colors.secondary}>
+							{path.basename(projectDirectory)}
+						</ThemedText>
+						<ThemedText variant="dim"> ({projectDirectory})</ThemedText>
+					</Box>
+					<Box marginTop={1}>
+						<ThemedText>Status: </ThemedText>
+						{hasGuardianIndex ? (
+							<ThemedText color={currentTheme.colors.success}>
+								Indexed ✓
+							</ThemedText>
+						) : (
+							<ThemedText color={currentTheme.colors.warning}>
+								Not indexed
+							</ThemedText>
+						)}
+					</Box>
 				</Box>
 			)}
 
@@ -110,11 +196,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 			) : (
 				<SelectInput
 					items={items}
-					onSelect={item => onSelectCommand(item.value)}
+					onSelect={handleCommandSelect}
 					itemComponent={(props) => {
 						// Cast to our custom props type to access description
 						const { isSelected, label } = props;
-						const description = (props as unknown as CustomItemProps).description;
+						const description = (props as unknown as {description?: string}).description;
 						return (
 						<Box>
 							<ThemedText variant={isSelected ? 'highlight' : 'default'}>
@@ -133,9 +219,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 			)}
 
 			{/* Footer with system info */}
-			<Box marginTop={1} borderStyle="single" paddingX={1}>
+			<Box 
+				marginTop={1} 
+				borderStyle="single" 
+				borderColor={currentTheme.colors.dimText}
+				paddingX={1}
+			>
 				<ThemedText variant="dim">
-					{os.type()} | {os.arch()} | Node {process.version}
+					{systemInfo.os} | {systemInfo.arch} | Node {systemInfo.node} | {systemInfo.memory}GB RAM
 				</ThemedText>
 			</Box>
 		</Box>

@@ -12,7 +12,7 @@
 	"scripts": {
 		"build": "tsc",
 		"dev": "ts-node source/cli.tsx",
-		"start": "bun run build && node dist/cli.js",
+		"start": "bun run build && node --expose-gc dist/cli.js",
 		"test": "prettier --check . && xo && ava",
 		"setup-wasm": "node ./source/tree-sitter-wasm/download-wasm-parsers.js"
 	},

@@ -120,6 +120,8 @@ export interface IndexedCodebase {
 		totalSymbols: number;
 		totalDependencies: number;
 		lastIndexed: string | Date;
+		cacheHits?: number;
+		cacheMisses?: number;
 	};
 }
 

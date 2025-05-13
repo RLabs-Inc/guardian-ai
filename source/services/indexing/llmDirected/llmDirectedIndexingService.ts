@@ -14,6 +14,7 @@ import { LLMService } from '../../llm/types.js';
 import { IndexingAgent } from './indexingAgent.js';
 import { PatternInterpreter } from './patternInterpreter.js';
 import { StoragePrimitives } from './storagePrimitives.js';
+import { getMemoryMonitor } from '../../utils/memoryMonitor.js';
 
 /**
  * Implementation of the LLM-directed code indexing service

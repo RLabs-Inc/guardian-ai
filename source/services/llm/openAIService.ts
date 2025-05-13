@@ -28,6 +28,9 @@ export class OpenAIService implements LLMService {
 		const memoryMonitor = getMemoryMonitor();
 
 		try {
+			// Force GC at the start to reclaim memory from previous operations
+			memoryMonitor.forceGC();
+
 			// Record memory usage at start
 			const promptLength = request.prompt ? request.prompt.length : 0;
 			const systemPromptLength = request.systemPrompt ? request.systemPrompt.length : 0;
@@ -39,19 +42,32 @@ export class OpenAIService implements LLMService {
 				maxTokens: request.options?.maxTokens || 1024
 			});
 
-			const {prompt, systemPrompt, options} = request;
+			// Use local variables to avoid holding references
+			const model = request.options?.model || this.defaultModel;
+			const maxTokens = request.options?.maxTokens || 1024;
+			const temperature = request.options?.temperature || 0.7;
+			const system = request.systemPrompt || 'You are a helpful AI assistant.';
+
+			// Store prompt in local variable so we can clear request
+			const userPrompt = request.prompt;
+
+			// Clear request fields to free memory
+			if (request.prompt && request.prompt.length > 5000) {
+				// @ts-ignore - This is intentional to help with memory cleanup
+				(request as any).prompt = undefined;
+			}
 
 			// Create a memory-efficient request
 			const apiRequest = {
-				model: options?.model || this.defaultModel,
-				max_tokens: options?.maxTokens || 1024,
-				temperature: options?.temperature || 0.7,
+				model,
+				max_tokens: maxTokens,
+				temperature,
 				messages: [
 					{
 						role: 'system' as const,
-						content: systemPrompt || 'You are a helpful AI assistant.',
+						content: system,
 					},
-					{role: 'user' as const, content: prompt},
+					{role: 'user' as const, content: userPrompt},
 				],
 			};
 
@@ -60,27 +76,48 @@ export class OpenAIService implements LLMService {
 
 			memoryMonitor.logMemoryUsage('openai_response_received');
 
-			// Extract response text
+			// Extract response text immediately
 			const responseText = response.choices[0]?.message?.content || '';
+
+			// Copy usage values to local variables
+			const promptTokens = response.usage?.prompt_tokens || 0;
+			const completionTokens = response.usage?.completion_tokens || 0;
+			const totalTokens = response.usage?.total_tokens || 0;
 
 			// Create result object
 			const result = {
 				text: responseText,
 				usage: {
-					promptTokens: response.usage?.prompt_tokens || 0,
-					completionTokens: response.usage?.completion_tokens || 0,
-					totalTokens: response.usage?.total_tokens || 0,
+					promptTokens,
+					completionTokens,
+					totalTokens,
 				},
 			};
 
-			// Clear references to large objects
-			// @ts-ignore - This is intentional to help with memory cleanup
-			response.choices = null;
+			// Aggressively clear references to large objects
+			if (response) {
+				// Use type assertions to avoid TypeScript errors
+				// @ts-ignore - This is intentional to help with memory cleanup
+				(response as any).choices = undefined;
+				// @ts-ignore - This is intentional to help with memory cleanup
+				(response as any).usage = undefined;
+				// @ts-ignore - This is intentional to help with memory cleanup
+				(response as any).system_fingerprint = undefined;
+				// @ts-ignore - This is intentional to help with memory cleanup
+				(response as any).id = undefined;
+				// @ts-ignore - This is intentional to help with memory cleanup
+				(response as any).model = undefined;
+				// @ts-ignore - This is intentional to help with memory cleanup
+				(response as any).object = undefined;
+			}
 
 			memoryMonitor.logMemoryUsage('openai_request_complete', {
 				responseLength: responseText.length,
 				totalTokens: result.usage.totalTokens
 			});
+
+			// Force GC after processing large response
+			memoryMonitor.forceGC();
 
 			return result;
 		} catch (error: unknown) {
@@ -129,8 +166,10 @@ export class OpenAIService implements LLMService {
 			const embedding = data[0]!.embedding;
 
 			// Clear references to free memory
-			// @ts-ignore - This is intentional to help with memory cleanup
-			response.data = null;
+			if (response) {
+				// @ts-ignore - This is intentional to help with memory cleanup
+				(response as any).data = undefined;
+			}
 
 			memoryMonitor.logMemoryUsage('openai_embedding_complete', {
 				embeddingDimensions: embedding.length,
@@ -173,8 +212,10 @@ export class OpenAIService implements LLMService {
 				.map(model => model.id);
 
 			// Clear response data to free memory
-			// @ts-ignore - This is intentional to help with memory cleanup
-			response.data = null;
+			if (response) {
+				// @ts-ignore - This is intentional to help with memory cleanup
+				(response as any).data = undefined;
+			}
 
 			memoryMonitor.logMemoryUsage('openai_get_models_complete', {
 				modelCount: filteredModelIds.length
@@ -206,6 +247,9 @@ export class OpenAIService implements LLMService {
 		const memoryMonitor = getMemoryMonitor();
 
 		try {
+			// Force GC at the start to reclaim memory from previous operations
+			memoryMonitor.forceGC();
+
 			// Record memory usage at start
 			const promptLength = request.prompt ? request.prompt.length : 0;
 			const systemPromptLength = request.systemPrompt ? request.systemPrompt.length : 0;
@@ -217,18 +261,31 @@ export class OpenAIService implements LLMService {
 				maxTokens: request.options?.maxTokens || 1024
 			});
 
-			const {prompt, systemPrompt, options} = request;
+			// Use local variables to avoid holding references
+			const model = request.options?.model || this.defaultModel;
+			const maxTokens = request.options?.maxTokens || 1024;
+			const temperature = request.options?.temperature || 0.7;
+			const system = request.systemPrompt || 'You are a helpful AI assistant.';
+
+			// Store prompt in local variable so we can clear request
+			const userPrompt = request.prompt;
+
+			// Clear request fields to free memory for long prompts
+			if (request.prompt && request.prompt.length > 5000) {
+				// @ts-ignore - This is intentional to help with memory cleanup
+				(request as any).prompt = undefined;
+			}
 
 			const stream = await this.client.chat.completions.create({
-				model: options?.model || this.defaultModel,
-				max_tokens: options?.maxTokens || 1024,
-				temperature: options?.temperature || 0.7,
+				model,
+				max_tokens: maxTokens,
+				temperature,
 				messages: [
 					{
 						role: 'system' as const,
-						content: systemPrompt || 'You are a helpful AI assistant.',
+						content: system,
 					},
-					{role: 'user' as const, content: prompt},
+					{role: 'user' as const, content: userPrompt},
 				],
 				stream: true,
 			});
@@ -244,7 +301,7 @@ export class OpenAIService implements LLMService {
 
 			// Track frequency of memory logging to avoid excessive logging
 			let chunkCounter = 0;
-			const logFrequency = 20; // Log memory every 20 chunks
+			const logFrequency = 10; // Increased frequency: Log memory every 10 chunks
 
 			for await (const chunk of stream) {
 				const content = chunk.choices[0]?.delta?.content || '';
@@ -262,23 +319,40 @@ export class OpenAIService implements LLMService {
 					};
 				}
 
-				// Log memory usage periodically during streaming
+				// Log memory usage more frequently during streaming
 				if (++chunkCounter % logFrequency === 0) {
 					memoryMonitor.logMemoryUsage('openai_stream_chunk_processed', {
 						chunkCount: chunkCounter,
 						currentTextLength: fullText.length
 					});
 
-					// Clear chunk objects periodically to help with GC
-					// @ts-ignore - This is intentional to help with memory cleanup
-					chunk.choices = null;
+					// Clear chunk objects aggressively to help with GC
+					if (chunk) {
+						// @ts-ignore - This is intentional to help with memory cleanup
+						(chunk as any).choices = undefined;
+						// @ts-ignore - This is intentional to help with memory cleanup
+						(chunk as any).id = undefined;
+						// @ts-ignore - This is intentional to help with memory cleanup
+						(chunk as any).model = undefined;
+						// @ts-ignore - This is intentional to help with memory cleanup
+						(chunk as any).object = undefined;
+						// @ts-ignore - This is intentional to help with memory cleanup
+						(chunk as any).created = undefined;
+					}
+
+					// Run GC more frequently for long generations
+					if (chunkCounter % 50 === 0) {
+						memoryMonitor.forceGC();
+					}
 				}
 			}
 
 			// Try to clean up stream resources
 			try {
-				// @ts-ignore - This is intentional to help with memory cleanup
-				stream.controller.abort();
+				if (stream && typeof stream.controller !== 'undefined' && stream.controller) {
+					stream.controller.abort();
+				}
+				// DO NOT attempt to set stream = null as it's a const
 			} catch (abortError) {
 				// Ignore abort errors, just trying to free resources
 			}
@@ -288,11 +362,8 @@ export class OpenAIService implements LLMService {
 				totalChunks: chunkCounter
 			});
 
-			// Check if memory usage is high and force GC if needed
-			const snapshot = memoryMonitor.getLatestSnapshot();
-			if (snapshot && snapshot.usage.heapUsed > 500 * 1024 * 1024) { // 500MB threshold
-				memoryMonitor.forceGC();
-			}
+			// Force GC after processing stream
+			memoryMonitor.forceGC();
 
 			return {
 				text: fullText,

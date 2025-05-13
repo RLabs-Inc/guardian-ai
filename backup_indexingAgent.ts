@@ -22,6 +22,7 @@ import {
   EnhanceSymbolMetadataRequest,
   EnhanceSymbolMetadataResponse,
   parseAgentResponse,
+  PaginatedResponse,
   shouldPaginateResponse
 } from './agentProtocol.js';
 import { FileSystemService } from '../../fileSystem/types.js';
@@ -1156,7 +1157,7 @@ export class IndexingAgent {
    */
   private async makeAgentRequest<Req extends AgentRequest, Res extends AgentResponse>(
     request: Req,
-    skipSizeCheck: boolean = false
+    maxResponseSize: number = 50000
   ): Promise<Res> {
     // Get memory monitor
     const memoryMonitor = getMemoryMonitor();
@@ -1170,8 +1171,7 @@ export class IndexingAgent {
       });
 
       // Check if this is a large request that might result in truncation
-      // Skip the check if skipSizeCheck is true to prevent recursion
-      const isLargeRequest = !skipSizeCheck && this.isLikelyLargeRequest(request);
+      const isLargeRequest = this.isLikelyLargeRequest(request);
 
       if (isLargeRequest) {
         console.log("Detected potentially large request, using multi-step approach...");
@@ -1538,7 +1538,7 @@ export class IndexingAgent {
       systemPrompt: this.getSystemPrompt(request.action),
       options: {
         temperature: 0.2,
-        maxTokens: 8000, // Use a moderate token limit to avoid memory issues
+        maxTokens: 16000, // Use maximum available tokens
       }
     });
 
@@ -1798,18 +1798,7 @@ export class IndexingAgent {
   }
 
   private isLikelyLargeRequest(request: AgentRequest): boolean {
-    // First check with shouldPaginateResponse, which has more sophisticated logic
-    try {
-      if (shouldPaginateResponse(request.data)) {
-        console.log("Request data indicates pagination would be helpful based on shouldPaginateResponse");
-        return true;
-      }
-    } catch (error) {
-      console.warn("Error checking pagination need:", error);
-      // Continue with fallback checks below
-    }
-
-    // Fallback to specific large request type checks
+    // Check specific large request types
     switch (request.action) {
       case AgentActionType.EXTRACT_SYMBOLS:
         // Large files or many chunks are likely to produce large responses
@@ -1859,8 +1848,7 @@ export class IndexingAgent {
 
       // Process this batch
       const batchResponse = await this.makeAgentRequest<ExtractSymbolsRequest, ExtractSymbolsResponse>(
-        batchRequest,
-        true // Skip size check to prevent recursion
+        batchRequest
       );
 
       if (batchResponse.success && batchResponse.data.symbols) {
@@ -1930,8 +1918,7 @@ export class IndexingAgent {
 
       // Process this batch
       const batchResponse = await this.makeAgentRequest<AnalyzeRelationshipsRequest, AnalyzeRelationshipsResponse>(
-        batchRequest,
-        true // Skip size check to prevent recursion
+        batchRequest
       );
 
       if (batchResponse.success && batchResponse.data.relationships) {
@@ -1990,8 +1977,7 @@ ${endSample}
 
     // Get chunking strategy based on samples
     const strategyResponse = await this.makeAgentRequest<DesignFileChunkingRequest, DesignFileChunkingResponse>(
-      sampleRequest,
-      true // Skip size check to prevent recursion
+      sampleRequest
     );
 
     if (!strategyResponse.success) {
@@ -2128,254 +2114,8 @@ Please provide ONLY the raw continuation part with NO additional explanations.
   }
 
   /**
-   * Normalize the chunking method by handling various possible formats/typos
+   * Finds the last complete JSON structure in a truncated string
    */
-  private normalizeChunkingMethod(method: string): string {
-    if (!method) return 'line-based'; // Default to line-based if no method specified
-
-    // Convert to lowercase and remove underscores/hyphens for consistent comparison
-    const normalized = method.toLowerCase().replace(/[_-]/g, '');
-
-    // Map various spellings to standard method names
-    switch (normalized) {
-      case 'functionbased':
-      case 'function':
-      case 'functions':
-      case 'functionallybased':
-        return 'function-based';
-
-      case 'classbased':
-      case 'class':
-      case 'classes':
-      case 'oop':
-        return 'class-based';
-
-      case 'structurebased':
-      case 'structure':
-      case 'structural':
-        return 'structure-based';
-
-      case 'fixedsize':
-      case 'fixed':
-      case 'fixedlength':
-      case 'size':
-      case 'sizebased':
-        return 'fixed-size';
-
-      case 'linebased':
-      case 'line':
-      case 'lines':
-      case 'byline':
-        return 'line-based';
-
-      case 'sectionbased':
-      case 'section':
-      case 'sections':
-      case 'bysection':
-        return 'section-based';
-
-      case 'commentbased':
-      case 'comment':
-      case 'comments':
-      case 'bycomment':
-        return 'comment-based';
-
-      default:
-        // Return the original method if no match
-        return method;
-    }
-  }
-
-  /**
-   * Find the best source of chunks from different property names the LLM might use
-   */
-  private findPotentialChunks(chunkingStrategy: DesignFileChunkingResponse['data']): Array<{startLine: number; endLine: number; type?: string}> {
-    // Check various properties where the LLM might have placed chunk definitions
-    if (chunkingStrategy.suggestedChunks && chunkingStrategy.suggestedChunks.length > 0) {
-      return chunkingStrategy.suggestedChunks;
-    }
-
-    // Check for alternate property names the LLM might use
-    const alternatePropertyNames = [
-      'chunks', 'proposedChunks', 'fileChunks', 'chunkDefinitions',
-      'recommendedChunks', 'chunkBoundaries', 'divisions'
-    ];
-
-    for (const propName of alternatePropertyNames) {
-      if ((chunkingStrategy as any)[propName] &&
-          Array.isArray((chunkingStrategy as any)[propName]) &&
-          (chunkingStrategy as any)[propName].length > 0) {
-
-        return (chunkingStrategy as any)[propName].map((chunk: any) => {
-          // Ensure each chunk has startLine and endLine
-          if (typeof chunk.startLine === 'number' && typeof chunk.endLine === 'number') {
-            return {
-              startLine: chunk.startLine,
-              endLine: chunk.endLine,
-              type: chunk.type || 'unknown'
-            };
-          }
-
-          // If chunk uses different property names, try to map them
-          const altStartNames = ['start', 'startLineNumber', 'begin', 'beginLine'];
-          const altEndNames = ['end', 'endLineNumber', 'finish', 'endLine'];
-
-          let startLine: number | undefined;
-          let endLine: number | undefined;
-
-          for (const name of altStartNames) {
-            if (typeof chunk[name] === 'number') {
-              startLine = chunk[name];
-              break;
-            }
-          }
-
-          for (const name of altEndNames) {
-            if (typeof chunk[name] === 'number') {
-              endLine = chunk[name];
-              break;
-            }
-          }
-
-          if (startLine !== undefined && endLine !== undefined) {
-            return {
-              startLine,
-              endLine,
-              type: chunk.type || chunk.chunkType || 'unknown'
-            };
-          }
-
-          // If we can't find valid line numbers, return a placeholder
-          console.warn('Found invalid chunk definition:', chunk);
-          return null;
-        }).filter(Boolean); // Remove null entries
-      }
-    }
-
-    // If no chunks found in any property, return empty array
-    return [];
-  }
-
-  /**
-   * Safely get the lines per chunk value from chunk size guidelines
-   */
-  private getSafeLinesPerChunk(chunkSizeGuidelines: any): number {
-    // Default value if nothing is specified
-    const DEFAULT_LINES_PER_CHUNK = 100;
-
-    if (!chunkSizeGuidelines) return DEFAULT_LINES_PER_CHUNK;
-
-    // Check for maxLines property first
-    if (typeof chunkSizeGuidelines.maxLines === 'number' && chunkSizeGuidelines.maxLines > 0) {
-      return chunkSizeGuidelines.maxLines;
-    }
-
-    // Check for alternative property names
-    const altProperties = ['linesPerChunk', 'lineCount', 'maxLineCount', 'chunkSize'];
-
-    for (const prop of altProperties) {
-      if (typeof chunkSizeGuidelines[prop] === 'number' && chunkSizeGuidelines[prop] > 0) {
-        return chunkSizeGuidelines[prop];
-      }
-    }
-
-    // If we can't find a valid value, use a reasonable default
-    return DEFAULT_LINES_PER_CHUNK;
-  }
-
-  /**
-   * Safely get the overlap value from overlap strategy
-   */
-  private getSafeOverlap(overlapStrategy: any): number {
-    // Default overlap if nothing is specified
-    const DEFAULT_OVERLAP = 5;
-
-    if (!overlapStrategy) return DEFAULT_OVERLAP;
-
-    // If overlap is disabled, return 0
-    if (overlapStrategy.enabled === false) return 0;
-
-    // Check for amount property first
-    if (typeof overlapStrategy.amount === 'number' && overlapStrategy.amount >= 0) {
-      return overlapStrategy.amount;
-    }
-
-    // Check for alternative property names
-    const altProperties = ['overlap', 'overlapLines', 'overlapSize', 'lineOverlap'];
-
-    for (const prop of altProperties) {
-      if (typeof overlapStrategy[prop] === 'number' && overlapStrategy[prop] >= 0) {
-        return overlapStrategy[prop];
-      }
-    }
-
-    // If overlap is enabled but no amount specified, use a reasonable default
-    if (overlapStrategy.enabled === true) {
-      return DEFAULT_OVERLAP;
-    }
-
-    // If we can't determine, use a conservative default
-    return DEFAULT_OVERLAP;
-  }
-
-  /**
-   * Validate chunks to ensure they have proper structure and content
-   */
-  private validateChunks(
-    chunks: Array<{content?: string; startLine: number; endLine: number; type?: string}>,
-    fileContent: string
-  ): Array<{content: string; startLine: number; endLine: number; type?: string}> {
-    if (!chunks || !Array.isArray(chunks)) {
-      console.warn('Invalid chunks array, returning empty array');
-      return [];
-    }
-
-    const lines = fileContent.split('\n');
-    const totalLines = lines.length;
-
-    return chunks.map(chunk => {
-      try {
-        // Ensure startLine and endLine are valid numbers
-        let startLine = typeof chunk.startLine === 'number' ? chunk.startLine : 1;
-        let endLine = typeof chunk.endLine === 'number' ? chunk.endLine : startLine + 1;
-
-        // Ensure lines are within bounds
-        startLine = Math.max(1, Math.min(startLine, totalLines));
-        endLine = Math.max(startLine, Math.min(endLine, totalLines));
-
-        // Ensure chunk has content
-        let content = chunk.content;
-        if (!content) {
-          // Extract content from file if not provided
-          content = lines.slice(startLine - 1, endLine).join('\n');
-        }
-
-        return {
-          content,
-          startLine,
-          endLine,
-          type: chunk.type || 'unknown'
-        };
-      } catch (error) {
-        console.error('Error validating chunk:', error);
-
-        // Return a minimal valid chunk
-        return {
-          content: "// Error in chunk validation",
-          startLine: 1,
-          endLine: 1,
-          type: 'error'
-        };
-      }
-    }).filter(chunk =>
-      // Filter out invalid chunks
-      chunk.content &&
-      chunk.startLine <= chunk.endLine &&
-      chunk.startLine > 0 &&
-      chunk.endLine > 0
-    );
-  }
-
   private findLastCompleteStructure(jsonString: string): string {
     // This is a simple implementation - in a real system you might want more sophisticated parsing
 
@@ -2426,168 +2166,6 @@ Please provide ONLY the raw continuation part with NO additional explanations.
 
     // If no complete structure found, just return the last 150 characters
     return jsonString.substring(Math.max(0, jsonString.length - 150));
-  }
-
-  /**
-   * Creates an agent prompt from a request
-   */
-  private createAgentPrompt<Req extends AgentRequest>(request: Req): string {
-    // Convert the request to a JSON string with pretty formatting
-    const jsonRequest = JSON.stringify(request, null, 2);
-
-    // Create a prompt with context about the action being performed
-    let prompt = `# Codebase Indexing Task: ${request.action}\n\n`;
-
-    // Add instructions based on the action type
-    switch (request.action) {
-      case AgentActionType.ANALYZE_CODEBASE:
-        prompt += `Please analyze the codebase structure provided below. Identify the type of codebase, ` +
-                  `dominant languages, complexity, and provide recommendations for indexing.\n\n`;
-        break;
-
-      case AgentActionType.DESIGN_INDEX_STRATEGY:
-        prompt += `Please design an optimal indexing strategy for this codebase based on the analysis ` +
-                  `provided. Consider file types, chunking approaches, and the constraints provided.\n\n`;
-        break;
-
-      case AgentActionType.ANALYZE_FILE:
-        prompt += `Please analyze this file to determine its complexity, structure, and prepare for chunking. ` +
-                  `Identify the best way to process this file for symbol extraction.\n\n`;
-        break;
-
-      case AgentActionType.DESIGN_FILE_CHUNKING:
-        prompt += `Please design an optimal chunking strategy for this file based on its content and structure. ` +
-                  `Identify logical divisions, functions, classes, or other units that should be processed together.\n\n`;
-        break;
-
-      case AgentActionType.EXTRACT_SYMBOLS:
-        prompt += `Please extract all symbols (functions, classes, variables, etc.) from the provided chunks. ` +
-                  `For each symbol, include its name, type, location, and other relevant information.\n\n`;
-        break;
-
-      case AgentActionType.ANALYZE_RELATIONSHIPS:
-        prompt += `Please analyze the relationships between the provided symbols. Identify imports, function calls, ` +
-                  `inheritance relationships, and other dependencies between symbols.\n\n`;
-        break;
-
-      case AgentActionType.ENHANCE_SYMBOL_METADATA:
-        prompt += `Please enhance the metadata for this symbol based on its content and relationships. ` +
-                  `Provide additional context, purpose, complexity assessment, and other relevant insights.\n\n`;
-        break;
-    }
-
-    // Check if pagination is requested
-    if ('pagination' in request && (request as any).pagination?.enabled) {
-      prompt += `## Important: Pagination Support\n` +
-                `If your response would be very large or contain many items, use pagination:\n` +
-                `1. Set \`continuation: true\` in your response data\n` +
-                `2. Include a \`continuation_token\` with any state needed for the next page\n` +
-                `3. Split your data appropriately across multiple responses\n\n`;
-    }
-
-    // Add the request data
-    prompt += `## Request Data\n\`\`\`json\n${jsonRequest}\n\`\`\`\n\n`;
-
-    // Add response instructions
-    prompt += `## Response Instructions\n` +
-              `1. Respond with a valid JSON object containing action, success, and data fields\n` +
-              `2. Ensure your response is complete and properly formatted\n` +
-              `3. Include all required information for this action type\n\n` +
-              `Respond only with valid JSON. Do not include any text before or after the JSON object.`;
-
-    return prompt;
-  }
-
-  /**
-   * Gets a system prompt for a specific agent action
-   */
-  private getSystemPrompt(action: AgentActionType): string {
-    // Base system prompt for all actions
-    const basePrompt = `You are an expert codebase analysis agent with deep knowledge of programming languages, ` +
-                       `software architecture, and code analysis techniques. Your task is to perform detailed ` +
-                       `analysis to support intelligent indexing and understanding of codebases.`;
-
-    // Action-specific additions
-    let actionPrompt = '';
-
-    switch (action) {
-      case AgentActionType.ANALYZE_CODEBASE:
-        actionPrompt = `Focus on identifying the overall structure, patterns, and complexity of the codebase. ` +
-                       `Your analysis will guide the indexing strategy.`;
-        break;
-
-      case AgentActionType.DESIGN_INDEX_STRATEGY:
-        actionPrompt = `Design an efficient and effective indexing strategy that balances thoroughness with ` +
-                       `resource constraints. Prioritize what matters most for code understanding.`;
-        break;
-
-      case AgentActionType.ANALYZE_FILE:
-        actionPrompt = `Perform detailed analysis of individual files to determine their structure, complexity, ` +
-                       `and the best approach for chunking and symbol extraction.`;
-        break;
-
-      case AgentActionType.DESIGN_FILE_CHUNKING:
-        actionPrompt = `Design optimal chunking strategies that preserve semantic meaning and logical structure ` +
-                       `while managing resource usage. Adapt to different file types and structures.`;
-        break;
-
-      case AgentActionType.EXTRACT_SYMBOLS:
-        actionPrompt = `Extract symbols with high precision and recall. Capture the essential information about ` +
-                       `each symbol including its type, location, and relationships to other symbols.`;
-        break;
-
-      case AgentActionType.ANALYZE_RELATIONSHIPS:
-        actionPrompt = `Identify and analyze relationships between symbols with attention to detail. Consider ` +
-                       `different types of relationships including inheritance, function calls, and imports.`;
-        break;
-
-      case AgentActionType.ENHANCE_SYMBOL_METADATA:
-        actionPrompt = `Enrich symbol metadata with high-quality semantic descriptions, complexity assessments, ` +
-                       `and insights that add value for understanding the code's purpose and function.`;
-        break;
-    }
-
-    // Technical instructions
-    const technicalPrompt = `\n\nYour responses must be valid JSON objects with the specified structure for each action type. ` +
-                           `Be precise and thorough in your analysis, while respecting response size limitations. ` +
-                           `If a response would be very large, use the pagination mechanism when requested.`;
-
-    return `${basePrompt} ${actionPrompt}${technicalPrompt}`;
-  }
-
-  /**
-   * Gets a system prompt for continuation requests
-   */
-  private getContinuationSystemPrompt(): string {
-    return `You are an expert codebase analysis agent continuing a previous response. ` +
-           `Your task is to provide the next part of a paginated or continued response. ` +
-           `\n\nFollow these guidelines:\n` +
-           `1. Continue from exactly where the previous response ended\n` +
-           `2. Maintain consistency with earlier parts of the response\n` +
-           `3. Provide your response as a valid JSON object\n` +
-           `4. If there is more data after this response, include continuation: true and a continuation_token\n` +
-           `5. If this is the final part of the response, omit continuation fields or set continuation: false\n` +
-           `\nIf receiving a CONTINUATION action with a token, use that to determine what content to provide next.`;
-  }
-
-  /**
-   * Extracts JSON from a response text
-   */
-  private extractJsonFromResponse(responseText: string): string {
-    // Clean up the response to extract just the JSON part
-    let cleanedText = responseText.trim();
-
-    // Remove any markdown code block markers
-    cleanedText = cleanedText.replace(/```(json)?|```/g, '');
-
-    // Try to extract just the JSON part (assuming it starts with { and ends with })
-    const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return jsonMatch[0];
-    }
-
-    // If we couldn't find a JSON object, return the cleaned text as a fallback
-    return cleanedText;
   }
 
   /**
@@ -2778,4 +2356,994 @@ Please provide ONLY the raw continuation part with NO additional explanations.
     console.log("Using default concatenation");
     return cleanedOriginal + cleanedContinuation;
   }
+
+  /**
+   * System prompt for continuation requests - supports both truncation recovery and pagination
+   */
+  private getContinuationSystemPrompt(): string {
+    return `
+You are an expert code indexing agent that specializes in analyzing codebases and optimizing indexing strategies.
+Your goal is to help build the most effective representation of code for retrieval and understanding.
+You have deep knowledge of programming languages, code structure, and semantic analysis.
+
+You received one of two types of continuation requests:
+
+TYPE 1: TRUNCATION RECOVERY
+If the input has JSON structure but appears to be incomplete, this is a truncation recovery request.
+
+TRUNCATION RECOVERY REQUIREMENTS:
+1. Your output must directly continue the truncated response exactly where it left off
+2. Do NOT repeat any information from the original response
+3. Do NOT add explanatory text or markdown formatting around your response
+4. Your response should start with the exact next character that would continue the truncated JSON
+5. Complete any open arrays, objects, or strings
+6. Add closing braces, brackets, or quotes as needed to make the final combined JSON valid
+7. Match the formatting and indentation style of the original response
+8. Focus only on completing the truncated data, not adding new information
+
+TYPE 2: PAGINATION REQUEST
+If the input is a simple request like {"action":"CONTINUATION","token":"some_token"}, this is a pagination request.
+
+PAGINATION REQUIREMENTS:
+1. Return the next page of data in the same format as the original response
+2. Keep your response to a reasonable size (max 100 items for arrays)
+3. Include "continuation":true and "continuation_token":"next_page_token" if more data exists
+4. Omit continuation fields or set "continuation":false for the final page
+5. For paginated array responses, generate completely new array items that would logically follow the previous page
+6. Return complete, valid JSON with the standard response format
+7. You may use the token value to determine which page of data to return
+
+Example paginated response:
+{
+  "action": "ANALYZE_RELATIONSHIPS",
+  "success": true,
+  "data": {
+    "relationships": [
+      {"source": "ComponentA", "target": "ComponentB", "type": "imports"},
+      {"source": "ComponentA", "target": "ComponentC", "type": "renders"}
+    ],
+    "continuation": true,
+    "continuation_token": "page2"
+  }
 }
+
+Respond with PURE JSON with no markdown formatting.`;
+  }
+
+  /**
+   * Merges an original truncated JSON with a continuation
+   */
+  private mergeJsonResponses(original: string, continuation: string): string {
+    // Clean the inputs
+    const cleanedOriginal = original.trim();
+    const cleanedContinuation = continuation.trim();
+
+    if (!cleanedOriginal || !cleanedContinuation) {
+      return cleanedOriginal + cleanedContinuation;
+    }
+
+    // Look for patterns that indicate how to merge
+    if (cleanedOriginal.endsWith('[') || cleanedOriginal.endsWith('[\n') || cleanedOriginal.endsWith('[ ')) {
+      console.log("Detected array continuation");
+      return cleanedOriginal + cleanedContinuation;
+    }
+
+    if (cleanedOriginal.endsWith('{') || cleanedOriginal.endsWith('{\n') || cleanedOriginal.endsWith('{ ')) {
+      console.log("Detected object continuation");
+      return cleanedOriginal + cleanedContinuation;
+    }
+
+    // Check for truncation in the middle of an array or object
+    const openBraces = (cleanedOriginal.match(/\{/g) || []).length;
+    const closeBraces = (cleanedOriginal.match(/\}/g) || []).length;
+    const openBrackets = (cleanedOriginal.match(/\[/g) || []).length;
+    const closeBrackets = (cleanedOriginal.match(/\]/g) || []).length;
+
+    if (openBraces > closeBraces || openBrackets > closeBrackets) {
+      console.log("Detected incomplete JSON structure");
+      return cleanedOriginal + cleanedContinuation;
+    }
+
+    // Default concatenation
+    return cleanedOriginal + cleanedContinuation;
+  }
+
+  /**
+   * Normalizes chunking method names to standardized format
+   */
+  private normalizeChunkingMethod(method?: string): string {
+    if (!method) return 'line-based';
+
+    const methodStr = String(method).toLowerCase();
+
+    if (methodStr.includes('function')) return 'function-based';
+    if (methodStr.includes('class')) return 'class-based';
+    if (methodStr.includes('line')) return 'line-based';
+    if (methodStr.includes('fixed')) return 'fixed-size';
+    if (methodStr.includes('section')) return 'section-based';
+    if (methodStr.includes('semantic')) return 'semantic';
+
+    return 'line-based'; // Default fallback
+  }
+
+  /**
+   * Finds potential chunks in a chunking strategy
+   */
+  private findPotentialChunks(chunkingStrategy: any): Array<{ startLine: number; endLine: number; type?: string }> {
+    if (!chunkingStrategy) return [];
+
+    // Look for chunks in various properties where they might be defined
+    const propertyNames = [
+      'suggestedChunks',
+      'chunks',
+      'fileChunks',
+      'sections',
+      'proposedChunks'
+    ];
+
+    for (const prop of propertyNames) {
+      if (chunkingStrategy[prop] && Array.isArray(chunkingStrategy[prop]) && chunkingStrategy[prop].length > 0) {
+        console.log(`Found chunks in property '${prop}'`);
+        return chunkingStrategy[prop];
+      }
+    }
+
+    return [];
+  }
+
+  /**
+   * Gets a safe value for lines per chunk with fallbacks
+   */
+  private getSafeLinesPerChunk(chunkSizeGuidelines: any): number {
+    if (!chunkSizeGuidelines) return 100;
+
+    const possibleProps = [
+      'linesPerChunk',
+      'maxLines',
+      'lineCount',
+      'chunkSize'
+    ];
+
+    for (const prop of possibleProps) {
+      const value = chunkSizeGuidelines[prop];
+      if (typeof value === 'number' && value > 0 && value < 1000) {
+        return value;
+      }
+    }
+
+    return 100; // Default fallback
+  }
+
+  /**
+   * Gets a safe value for chunk overlap with fallbacks
+   */
+  private getSafeOverlap(overlapStrategy: any): number {
+    if (!overlapStrategy) return 10;
+
+    const possibleProps = [
+      'overlap',
+      'overlapLines',
+      'lineOverlap',
+      'amount'
+    ];
+
+    for (const prop of possibleProps) {
+      const value = overlapStrategy[prop];
+      if (typeof value === 'number' && value >= 0 && value < 100) {
+        return value;
+      }
+    }
+
+    return 10; // Default fallback
+  }
+
+  /**
+   * Validates chunks to ensure they contain valid data and don't exceed content bounds
+   */
+  private validateChunks(chunks: Array<any>, content: string): Array<{ content: string; startLine: number; endLine: number; type?: string }> {
+    if (!chunks || !Array.isArray(chunks) || chunks.length === 0) {
+      console.warn("No chunks to validate, returning empty array");
+      return [];
+    }
+
+    // Split content into lines for bounds checking
+    const lines = content.split('\n');
+    const totalLines = lines.length;
+
+    console.log(`Validating ${chunks.length} chunks against ${totalLines} lines of content`);
+
+    // Map chunks to valid chunks with proper bounds
+    return chunks.map(chunk => {
+      try {
+        // Ensure chunk has minimal valid properties
+        if (!chunk || typeof chunk !== 'object') {
+          console.warn("Invalid chunk object, creating minimal valid chunk");
+          return {
+            content: "// Invalid chunk",
+            startLine: 1,
+            endLine: 2,
+            type: 'error'
+          };
+        }
+
+        // Create a safe chunk with valid bounds
+        const safeChunk = {
+          content: typeof chunk.content === 'string' ? chunk.content : "// No content",
+          startLine: Math.max(1, Math.min(parseInt(chunk.startLine) || 1, totalLines)),
+          endLine: Math.max(1, Math.min(parseInt(chunk.endLine) || 2, totalLines)),
+          type: chunk.type || 'unknown'
+        };
+
+        // Ensure end line is not before start line
+        if (safeChunk.endLine < safeChunk.startLine) {
+          safeChunk.endLine = safeChunk.startLine + 1;
+        }
+
+        // If content was not provided, extract it from the file
+        if (!chunk.content) {
+          safeChunk.content = lines.slice(safeChunk.startLine - 1, safeChunk.endLine).join('\n');
+        }
+
+        // Copy any additional properties that might be useful
+        const extendedChunk = chunk as any;
+        const extendedSafeChunk = safeChunk as any;
+
+        if (extendedChunk.name) extendedSafeChunk.name = extendedChunk.name;
+        if (extendedChunk.description) extendedSafeChunk.description = extendedChunk.description;
+
+        return safeChunk;
+      } catch (error) {
+        console.error(`Error validating chunk: ${error}`, chunk);
+        // Return a minimal valid chunk in case of errors
+        return {
+          content: '// Error in chunk validation',
+          startLine: 1,
+          endLine: 2,
+          type: 'error'
+        };
+      }
+    }).filter(chunk => {
+      // Filter out chunks with no content or identical start/end lines
+      if (!chunk.content || chunk.startLine === chunk.endLine) {
+        console.warn(`Removing empty chunk or zero-length chunk at line ${chunk.startLine}`);
+        return false;
+      }
+      return true;
+    });
+  }
+}
+  "action": "ANALYZE_FILE",
+  "success": true,
+  "data": {
+    "fileType": "JavaScript",
+    "complexity": 7,
+    "estimatedSymbolCount": 15,
+    "detectedPatterns": [
+      "Module pattern",
+      "Factory functions",
+      "Async/await",
+      "Event-driven
+\`\`\`
+
+Your continuation might be:
+\`\`\`
+ architecture"
+    ],
+    "suggestedChunkingStrategy": "function-based",
+    "estimatedChunks": 8,
+    "potentialSymbolTypes": ["function", "class", "variable"],
+    "uniqueCharacteristics": ["Heavy use of closures", "Dynamic imports"]
+  }
+}
+\`\`\`
+
+Notice that the continuation starts with exactly where the original was cut off (inside the string "Event-driven") and includes all remaining content to complete the JSON structure.
+
+DO NOT leave any part of the JSON structure incomplete. Ensure all opened structures are properly closed.
+`;
+  }
+
+  /**
+   * Creates a prompt for the LLM agent based on the request
+   */
+  private createAgentPrompt<Req extends AgentRequest>(request: Req): string {
+    return `
+# Indexing Agent Request
+
+## Action
+${request.action}
+
+## Data
+\`\`\`json
+${JSON.stringify(request.data, null, 2)}
+\`\`\`
+
+## Instructions
+You are the LLM Indexing Agent responsible for analyzing and directing the indexing of a codebase.
+Your task is to respond to this specific request with a well-structured analysis.
+
+YOU MUST provide your response as a valid, properly formatted JSON object with EXACTLY this structure:
+\`\`\`json
+{
+  "action": "${request.action}",
+  "success": true,
+  "data": {
+    "field1": "Example value",
+    "field2": ["example", "array", "items"],
+    "field3": {
+      "nested": "object example"
+    }
+  }
+}
+\`\`\`
+
+CRITICAL REQUIREMENTS:
+1. Your response MUST be properly formatted JSON that can be parsed with JSON.parse()
+2. DO NOT include any explanatory text before or after the JSON object
+3. ENSURE all quotes are double-quotes, not single quotes
+4. ENSURE all property names have double-quotes around them
+5. ALL arrays and objects must be properly closed with matching brackets
+6. The response MUST start with '{' and end with '}'
+7. DO NOT use JavaScript features like comments, trailing commas, or unquoted property names
+8. REMOVE any explanatory comments in the JSON like // comments
+
+Be thorough in your analysis but focus on practical, implementable strategies.
+VALIDATE your JSON structure before returning it to ensure it's properly formatted.
+`;
+  }
+
+  /**
+   * Gets the system prompt for a specific action type
+   */
+  private getSystemPrompt(action: AgentActionType): string {
+    const basePrompt = `
+You are an expert code indexing agent that specializes in analyzing codebases and optimizing indexing strategies.
+Your goal is to help build the most effective representation of code for retrieval and understanding.
+You have deep knowledge of programming languages, code structure, and semantic analysis.
+
+IMPORTANT:
+- Always provide output as valid JSON that matches the expected response format for the requested action
+- Ensure all JSON keys have double quotes and values are properly formatted
+- Do not include comments in your JSON output
+- Always use double quotes (") for strings in JSON, never single quotes (')
+- Validate your JSON before returning to ensure it can be parsed
+`;
+
+    switch (action) {
+      case AgentActionType.ANALYZE_CODEBASE:
+        return `${basePrompt}
+For codebase analysis, focus on identifying:
+- The type of codebase (web app, library, CLI tool, etc.)
+- Dominant programming languages and their versions
+- Major frameworks or libraries in use
+- Project structure patterns (MVC, microservices, etc.)
+- Potential complexity challenges
+`;
+
+      case AgentActionType.DESIGN_INDEX_STRATEGY:
+        return `${basePrompt}
+For indexing strategy design, focus on:
+- Creating a coherent approach to indexing the entire codebase
+- Prioritizing the most important parts of the code
+- Defining specific chunking strategies per file type
+- Identifying the most important symbol types to extract
+- Planning for efficient relationship mapping
+- Considering constraints like memory usage and processing time
+
+IMPORTANT FILE TYPE INSTRUCTIONS:
+- Include a "fileExtensions" property in your response that is an array of file extensions (like [".ts", ".tsx", ".js"])
+- Do NOT include full file paths or glob patterns - only pure extensions starting with a dot
+- Example: ["*.ts", "*.tsx"] is wrong, [".ts", ".tsx"] is correct
+- This is critical for the indexing system to work properly
+`;
+
+      case AgentActionType.ANALYZE_FILE:
+        return `${basePrompt}
+For file analysis, focus on:
+- Identifying the specific language features used
+- Estimating the complexity of the code
+- Detecting code patterns and architectural choices
+- Determining the best approach for chunking this specific file
+- Identifying the types of symbols that should be extracted
+`;
+
+      case AgentActionType.DESIGN_FILE_CHUNKING:
+        return `${basePrompt}
+For file chunking design, focus on:
+- Selecting the optimal chunking method for this specific file
+- Defining clear chunk boundaries based on code structure
+- Determining if overlap between chunks is beneficial
+- Providing concrete examples of how the file should be chunked
+- Considering both semantic meaning and size constraints
+
+You have complete freedom to design any chunking pattern that's appropriate for this file.
+You can define patterns based on:
+- Regular expressions
+- Delimiter pairs
+- Block structures
+- Semantic boundaries
+- Hierarchical structures
+- Markup elements
+- Structured data formats
+- Or any custom approach you think is appropriate
+
+Define a custom pattern by including a 'patternDefinition' object in your response with these fields:
+- type: The pattern type (e.g., 'regex', 'delimiter', 'block', 'semantic', etc.)
+- definition: A detailed description of how to identify chunks (can include any properties you want)
+- applicationRules: Rules for how to apply the pattern (can include any properties you want)
+
+EXAMPLE PATTERN DEFINITIONS:
+
+For a semantic section-based approach:
+\`\`\`
+"patternDefinition": {
+  "type": "semantic",
+  "definition": {
+    "boundaryType": "heading",
+    "headingLevel": [1, 2]
+  },
+  "applicationRules": {
+    "includeHeading": true,
+    "minimumSectionSize": 10
+  }
+}
+\`\`\`
+
+For a regex-based approach:
+\`\`\`
+"patternDefinition": {
+  "type": "regex",
+  "definition": {
+    "pattern": "function\\s+\\w+\\s*\\([^)]*\\)\\s*\\{[\\s\\S]*?\\}",
+    "flags": "g"
+  },
+  "applicationRules": {
+    "minimumSize": 50,
+    "mergeSmallChunks": true
+  }
+}
+\`\`\`
+
+For a delimiter-based approach:
+\`\`\`
+"patternDefinition": {
+  "type": "delimiter",
+  "definition": {
+    "start": "/**",
+    "end": "*/"
+  },
+  "applicationRules": {
+    "includeDelimiters": true,
+    "skipEmpty": true
+  }
+}
+\`\`\`
+
+The pattern will be dynamically interpreted and executed, so be as specific as possible.
+`;
+
+      case AgentActionType.EXTRACT_SYMBOLS:
+        return `${basePrompt}
+For symbol extraction, focus on:
+- Identifying all relevant symbols in the provided chunks
+- Extracting accurate metadata for each symbol
+- Capturing the hierarchical relationship between symbols
+- Providing useful descriptions of each symbol's purpose
+- Ensuring all important symbols are captured
+
+EXTRACTION PATTERNS:
+You should also include extraction patterns in your response. These are structured descriptions of how to identify specific types of symbols in the code.
+
+For each pattern, include:
+- type: The pattern type (regex, ast, semantic)
+- targetSymbolTypes: Types of symbols this pattern targets (function, class, etc.)
+- definition: Configuration details including pattern definition
+- refinement: Optional rules for filtering extracted symbols
+
+EXAMPLES OF PATTERN DEFINITIONS:
+
+For TypeScript/JavaScript functions:
+"extractionPatterns": [
+  {
+    "type": "regex",
+    "targetSymbolTypes": ["function"],
+    "definition": {
+      "pattern": "function\\\\s+(\\\\w+)\\\\s*\\\\(([^)]*)\\\\)",
+      "flags": "g",
+      "group2Name": "parameters"
+    }
+  }
+]
+
+For class-based patterns:
+"extractionPatterns": [
+  {
+    "type": "regex",
+    "targetSymbolTypes": ["class"],
+    "definition": {
+      "pattern": "class\\\\s+(\\\\w+)(?:\\\\s+extends\\\\s+(\\\\w+))?",
+      "flags": "g",
+      "group2Name": "extends"
+    }
+  }
+]
+
+For semantic patterns:
+"extractionPatterns": [
+  {
+    "type": "semantic",
+    "targetSymbolTypes": ["interface", "type"],
+    "definition": {
+      "structureType": "declaration",
+      "identifierPosition": "after-keyword"
+    }
+  }
+]
+
+Your patterns should be tailored to the specific file type and content structure.
+`;
+
+      case AgentActionType.ANALYZE_RELATIONSHIPS:
+        return `${basePrompt}
+For relationship analysis, focus on:
+- Identifying dependencies between symbols
+- Detecting inheritance and implementation relationships
+- Finding function calls and references
+- Understanding import/export patterns
+- Mapping the data flow between components
+
+RELATIONSHIP PATTERNS:
+You should include relationship patterns in your response. These are structured descriptions of how to identify relationships between symbols in code. I encourage you to be creative and define any relationship types that make sense for this specific codebase.
+
+For each pattern, you can include:
+- type: Define ANY relationship type that makes sense (not limited to predefined categories - be creative!)
+- sourceType: Types of symbols that can be the source of this relationship (array of strings)
+- targetType: Types of symbols that can be the target of this relationship (array of strings)
+- detection: Configuration details for detecting the relationship (completely up to you)
+- refinement: Optional rules for filtering detected relationships
+- Any other fields you think would be helpful
+
+The detection field can include ANY properties you think would help identify this relationship:
+- pattern: A regex pattern string for matching relationships in code
+- contentPattern: A template string that can include \${targetName} which will be replaced with actual symbol names
+- Any custom detection logic you can describe
+
+EXAMPLES OF PATTERN DEFINITIONS:
+
+For import relationships:
+"relationshipPatterns": [
+  {
+    "type": "import",
+    "sourceType": ["function", "class", "variable"],
+    "detection": {
+      "pattern": "(?:import|require)[\\\\s\\\\(]*[\\\\'\\\\"]([^\\\\'\\\\\"]+)[\\\\'\\\\"]",
+      "includeExternal": true
+    }
+  }
+]
+
+For inheritance relationships:
+"relationshipPatterns": [
+  {
+    "type": "inheritance",
+    "sourceType": ["class", "interface"],
+    "targetType": ["class", "interface"],
+    "detection": {
+      "pattern": "(?:extends|implements)\\\\s+([\\\\w\\\\.,\\\\s]+)",
+      "includeExternal": true
+    }
+  }
+]
+
+For custom relationship types:
+"relationshipPatterns": [
+  {
+    "type": "dataflow",
+    "description": "Function modifies or reads data from a variable/property",
+    "sourceType": ["function", "method"],
+    "targetType": ["variable", "property"],
+    "detection": {
+      "contentPattern": "$\\{targetName\\}\\\\s*[=\\\\[]|\\\\breturn\\\\s+[$\\{targetName\\}]|\\\\b$\\{targetName\\}\\\\.\\\\w+"
+    },
+    "strength": "medium", // Custom field showing relationship strength
+    "directionality": "bidirectional" // Custom field for flow direction
+  }
+]
+
+For domain-specific relationships:
+"relationshipPatterns": [
+  {
+    "type": "renders",
+    "description": "UI component renders another component",
+    "sourceType": ["class", "function"],
+    "targetType": ["class", "function"],
+    "detection": {
+      "jsxPattern": "<$\\{targetName\\}[\\\\s>]",
+      "importCheck": true,
+      "requiresProps": false
+    },
+    "visualWeight": 2, // Custom field for visualization
+    "category": "ui" // Custom categorization
+  }
+]
+
+Your patterns should be tailored to the specific code structure, language features, and relationship types present in the analyzed file. Include patterns for all relevant relationship types you can identify. Be sure to include both the relationships and the patterns in your response.
+`;
+
+      case AgentActionType.ENHANCE_SYMBOL_METADATA:
+        return `${basePrompt}
+For metadata enhancement, focus on:
+- Providing deeper semantic understanding of the symbol
+- Estimating the symbol's importance in the overall codebase
+- Identifying potential use cases and purposes
+- Suggesting optimal embedding strategies
+- Extracting documentation or generating it if missing
+`;
+
+      default:
+        return basePrompt;
+    }
+  }
+
+  /**
+   * Extracts JSON from the LLM's response with enhanced recovery mechanisms
+   * for handling truncated or malformed JSON
+   */
+  private extractJsonFromResponse(response: string): string {
+    // Log the original response for debugging (limited length for log clarity)
+    console.log("Raw LLM response:", response.substring(0, 500) + (response.length > 500 ? "..." : ""));
+
+    // Step 1: First check if the response is already valid JSON
+    try {
+      const trimmed = response.trim();
+      JSON.parse(trimmed);
+      console.log("Response is already valid JSON");
+      return trimmed;
+    } catch (parseError) {
+      // Not valid JSON, continue with extraction attempts
+    }
+
+    // Step 2: Try to find JSON object in the response (some LLMs wrap it in code blocks)
+    // Look for JSON in markdown code blocks (```json```) or just wrapped in curly braces
+    const jsonCodeBlockRegex = /```(?:json)?([\s\S]*?)```/g;
+    const codeBlockMatch = jsonCodeBlockRegex.exec(response);
+
+    if (codeBlockMatch && codeBlockMatch[1]) {
+      const extracted = codeBlockMatch[1].trim();
+      console.log("Extracted JSON from code block:", extracted.substring(0, 200) + (extracted.length > 200 ? "..." : ""));
+
+      // Verify it's valid JSON or has opening brace (might be truncated)
+      if (extracted.startsWith('{')) {
+        return extracted;
+      }
+    }
+
+    // Step 3: Find the most complete JSON object in the text
+    // This looks for the longest possible valid JSON structure
+    const jsonObjectRegex = /(\{[\s\S]*\})/g;
+    let longestMatch = '';
+    let match;
+
+    // Find all potential JSON objects
+    while ((match = jsonObjectRegex.exec(response)) !== null) {
+      if (match[1].length > longestMatch.length) {
+        // Try to validate if it's valid JSON
+        try {
+          JSON.parse(match[1]);
+          longestMatch = match[1]; // Only store valid JSON
+        } catch (e) {
+          // If it's longer but invalid, still consider it for later repair
+          if (longestMatch === '') {
+            longestMatch = match[1];
+          }
+        }
+      }
+    }
+
+    if (longestMatch) {
+      console.log("Found JSON object match:", longestMatch.substring(0, 200) + (longestMatch.length > 200 ? "..." : ""));
+      return longestMatch;
+    }
+
+    // Step 4: More aggressive extraction for truncated or malformed JSON
+    // Clean up the response and look for JSON-like structures
+    const cleaned = response.trim()
+      .replace(/[\r\n\t]+/g, ' ') // Replace newlines and tabs with spaces
+      .replace(/\s{2,}/g, ' ');   // Replace multiple spaces with a single space
+
+    // Find the first opening brace and last closing brace
+    const jsonStart = cleaned.indexOf('{');
+
+    // If we found an opening brace, try to extract JSON
+    if (jsonStart >= 0) {
+      let jsonEnd = cleaned.lastIndexOf('}');
+
+      // If no closing brace or it appears before the opening brace, assume truncated JSON
+      if (jsonEnd < jsonStart) {
+        jsonEnd = cleaned.length - 1;
+        console.log("Detected potentially truncated JSON (no closing brace)");
+      }
+
+      // Extract what looks like JSON
+      const jsonPart = cleaned.substring(jsonStart, jsonEnd + 1);
+      console.log("JSON-like part found:", jsonPart.substring(0, 200) + (jsonPart.length > 200 ? "..." : ""));
+
+      // Check if this is valid JSON already
+      try {
+        JSON.parse(jsonPart);
+        return jsonPart;
+      } catch (error) {
+        // Return it for repair attempts in later stages
+        console.log("Extracted JSON-like structure (invalid but will be repaired later)");
+        return jsonPart;
+      }
+    }
+
+    // Step 5: Last resort - return the entire response for repair attempts
+    console.log("No JSON structure found, returning entire response for repair");
+    return response;
+          const quoteCount = (repairedJson.match(/"/g) || []).length;
+
+          // Fix unbalanced braces, brackets, and quotes
+          if (openBraces > closeBraces) {
+            console.log(`Adding ${openBraces - closeBraces} missing closing braces`);
+            repairedJson += '}' .repeat(openBraces - closeBraces);
+          }
+
+          if (openBrackets > closeBrackets) {
+            console.log(`Adding ${openBrackets - closeBrackets} missing closing brackets`);
+            repairedJson += ']' .repeat(openBrackets - closeBrackets);
+          }
+
+          if (quoteCount % 2 !== 0) {
+            console.log(`Fixing unbalanced quotes`);
+            repairedJson += '"';
+          }
+
+          // Check for specific truncated patterns
+          if (repairedJson.match(/,\s*$/)) {
+            console.log("Fixing trailing comma");
+            repairedJson = repairedJson.replace(/,\s*$/, '');
+          }
+
+          if (repairedJson.match(/:\s*$/)) {
+            console.log("Fixing truncated property");
+            repairedJson = repairedJson.replace(/:\s*$/, ': null');
+          }
+
+          // Step 4.2: One final verification
+          try {
+            JSON.parse(repairedJson);
+            console.log("JSON repair successful");
+            return repairedJson;
+          } catch (finalError) {
+            console.log("JSON repair unsuccessful, returning extracted JSON for further processing");
+            return jsonPart; // Return the original extracted part for further processing
+          }
+        }
+      }
+
+      // Step 5: If we can't find a JSON-like structure, try to find an action key and create minimal JSON
+      const actionMatch = cleaned.match(/"action"\s*:\s*"([^"]+)"/);
+      if (actionMatch) {
+        console.log("Creating minimal valid JSON from action field");
+        return `{"action": "${actionMatch[1]}", "success": false, "data": {}}`;
+      }
+
+      // Step 6: Last resort - return the cleaned response for further processing
+      console.log("No JSON pattern found, returning cleaned response");
+      return cleaned;
+    } catch (error) {
+      console.error(`Error in JSON extraction: ${error instanceof Error ? error.message : String(error)}`);
+      console.log("Using emergency JSON repair");
+
+      // Emergency fallback - create a minimal valid JSON object
+      return '{"success": false, "data": {}, "error": "JSON extraction failed"}';
+    }
+  }
+
+  /**
+   * Gets the storage primitives for direct use
+   */
+  getStoragePrimitives(): StoragePrimitives {
+    return this.storagePrimitives;
+  }
+
+  /**
+   * Normalizes chunking method strings to handle different formats from LLMs
+   * @param method The raw chunking method string from the LLM
+   * @returns Normalized chunking method string
+   */
+  private normalizeChunkingMethod(method?: string): string {
+    if (!method) {
+      console.log('No chunking method provided, defaulting to line-based');
+      return 'line-based';
+    }
+
+    // Convert to lowercase and trim whitespace
+    const normalizedMethod = method.toLowerCase().trim();
+
+    // Handle various naming conventions
+    if (normalizedMethod.includes('function') || normalizedMethod === 'functional' || normalizedMethod === 'by-function') {
+      return 'function-based';
+    }
+
+    if (normalizedMethod.includes('class') || normalizedMethod === 'by-class') {
+      return 'class-based';
+    }
+
+    if (normalizedMethod.includes('fixed') || normalizedMethod.includes('size')) {
+      return 'fixed-size';
+    }
+
+    if (normalizedMethod.includes('line')) {
+      return 'line-based';
+    }
+
+    if (normalizedMethod.includes('section') || normalizedMethod.includes('heading') || normalizedMethod.includes('comment')) {
+      return 'section-based';
+    }
+
+    // If no match, return the original but with hyphens instead of underscores for consistency
+    console.log(`Using custom chunking method: ${normalizedMethod}`);
+    return normalizedMethod.replace(/_/g, '-');
+  }
+
+  /**
+   * Find potential chunks from different property names the LLM might use
+   * @param chunkingStrategy The chunking strategy object from the LLM
+   * @returns Array of chunks with standardized fields
+   */
+  private findPotentialChunks(chunkingStrategy: any): Array<{ startLine: number; endLine: number; type?: string }> {
+    if (!chunkingStrategy || typeof chunkingStrategy !== 'object') {
+      console.warn('Invalid chunking strategy provided');
+      return [];
+    }
+
+    // Try different property names the LLM might use for chunks
+    const potentialChunkProperties = [
+      'suggestedChunks',
+      'recommendedChunks',
+      'chunks',
+      'proposedChunks',
+      'definedChunks',
+      'sections',
+      'functions',
+      'classes',
+      'codeBlocks'
+    ];
+
+    // Try to find chunks using different property names
+    for (const prop of potentialChunkProperties) {
+      const chunks = chunkingStrategy[prop];
+
+      if (chunks && Array.isArray(chunks) && chunks.length > 0) {
+        console.log(`Found ${chunks.length} chunks using property '${prop}'`);
+
+        // Validate and normalize chunks
+        return chunks.filter(chunk => {
+          // Check if chunk is a valid object
+          if (!chunk || typeof chunk !== 'object') {
+            console.warn('Skipping invalid chunk:', chunk);
+            return false;
+          }
+
+          // Check if chunk has required startLine and endLine properties
+          const hasStartLine = 'startLine' in chunk && !isNaN(Number(chunk.startLine));
+          const hasEndLine = 'endLine' in chunk && !isNaN(Number(chunk.endLine));
+
+          // Alternative property names
+          if (!hasStartLine && ('start' in chunk) && !isNaN(Number(chunk.start))) {
+            chunk.startLine = Number(chunk.start);
+          }
+
+          if (!hasEndLine && ('end' in chunk) && !isNaN(Number(chunk.end))) {
+            chunk.endLine = Number(chunk.end);
+          }
+
+          // Check again after potential conversions
+          const isValid =
+            'startLine' in chunk &&
+            'endLine' in chunk &&
+            !isNaN(Number(chunk.startLine)) &&
+            !isNaN(Number(chunk.endLine));
+
+          if (!isValid) {
+            console.warn('Skipping chunk with missing or invalid line numbers:', chunk);
+          }
+
+          return isValid;
+        }).map(chunk => ({
+          startLine: Number(chunk.startLine),
+          endLine: Number(chunk.endLine),
+          type: chunk.type || chunkingStrategy.chunkingMethod || 'unknown'
+        }));
+      }
+    }
+
+    // If we get here, no chunks were found with any of the expected property names
+    console.log('No chunks found in chunking strategy with any known property names');
+    return [];
+  }
+
+  /**
+   * Safely extract lines per chunk from chunk size guidelines
+   * @param chunkSizeGuidelines The chunk size guidelines object
+   * @returns Number of lines per chunk
+   */
+  private getSafeLinesPerChunk(chunkSizeGuidelines: any): number {
+    const DEFAULT_LINES_PER_CHUNK = 100;
+
+    if (!chunkSizeGuidelines || typeof chunkSizeGuidelines !== 'object') {
+      return DEFAULT_LINES_PER_CHUNK;
+    }
+
+    // Try different property names for line count
+    const possibleProperties = ['maxLines', 'lines', 'linesPerChunk', 'lineCount', 'chunkSize'];
+
+    for (const prop of possibleProperties) {
+      if (prop in chunkSizeGuidelines && !isNaN(Number(chunkSizeGuidelines[prop]))) {
+        const lines = Number(chunkSizeGuidelines[prop]);
+        // Ensure value is reasonable (between 5 and 500 lines)
+        if (lines >= 5 && lines <= 500) {
+          return lines;
+        } else {
+          console.log(`Found ${prop} property but value ${lines} is outside reasonable range`);
+        }
+      }
+    }
+
+    return DEFAULT_LINES_PER_CHUNK;
+  }
+
+  /**
+   * Safely extract overlap from overlap strategy
+   * @param overlapStrategy The overlap strategy object
+   * @returns Number of lines to overlap
+   */
+  private getSafeOverlap(overlapStrategy: any): number {
+    const DEFAULT_OVERLAP = 0;
+    const MAX_OVERLAP = 50;
+
+    if (!overlapStrategy || typeof overlapStrategy !== 'object') {
+      return DEFAULT_OVERLAP;
+    }
+
+    // Check if overlap is enabled
+    const isEnabled =
+      (overlapStrategy.enabled === true) ||
+      (overlapStrategy.enable === true) ||
+      (overlapStrategy.useOverlap === true);
+
+    if (!isEnabled) {
+      return DEFAULT_OVERLAP;
+    }
+
+    // Try different property names for overlap amount
+    const possibleProperties = ['amount', 'lines', 'overlapLines', 'size', 'value'];
+
+    for (const prop of possibleProperties) {
+      if (prop in overlapStrategy && !isNaN(Number(overlapStrategy[prop]))) {
+        const overlap = Number(overlapStrategy[prop]);
+
+        // Ensure value is reasonable (between 0 and MAX_OVERLAP lines)
+        if (overlap >= 0 && overlap <= MAX_OVERLAP) {
+          return overlap;
+        } else {
+          console.log(`Found ${prop} property but value ${overlap} is outside reasonable range`);
+          // Return a safe value within range
+          return Math.min(Math.max(0, overlap), MAX_OVERLAP);
+        }
+      }
+    }
+
+    // If enabled but no amount specified, use a reasonable default
+    return 10; // Default to 10 lines overlap when enabled but amount not specified
+  }
+
+  /**
+   * Validates chunks to ensure they contain valid line ranges
+   * @param chunks Array of chunks to validate
+   * @param content File content for reference
+   * @returns Validated and corrected chunks
+   */

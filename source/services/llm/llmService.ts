@@ -1,4 +1,4 @@
-// src/services/llm/llmService.ts
+// source/services/llm/llmService.ts
 import Anthropic from '@anthropic-ai/sdk';
 import {LLMService, LLMRequest, LLMResponse} from './types.js';
 import * as dotenv from 'dotenv';
@@ -62,30 +62,36 @@ export class AnthropicService implements LLMService {
 			const responseText =
 				firstContent && firstContent.type === 'text' ? firstContent.text : '';
 
+			// Extract usage data to local variables
+			const promptTokens = response.usage.input_tokens;
+			const completionTokens = response.usage.output_tokens;
+			const totalTokens = promptTokens + completionTokens;
+
 			// Create the response object
 			const result = {
 				text: responseText,
 				usage: {
-					promptTokens: response.usage.input_tokens,
-					completionTokens: response.usage.output_tokens,
-					totalTokens:
-						response.usage.input_tokens + response.usage.output_tokens,
+					promptTokens,
+					completionTokens,
+					totalTokens
 				},
 			};
 
-			// Aggressively clear references to large objects
+			// Clear properties instead of reassigning the const variables
 			// @ts-ignore - This is intentional to help with memory cleanup
-			response.content = null;
-			// @ts-ignore - This is intentional to help with memory cleanup
-			response.stop_reason = null;
-			// @ts-ignore - This is intentional to help with memory cleanup
-			response.usage = null;
-			// @ts-ignore - This is intentional to help with memory cleanup
-			response.id = null;
-			// @ts-ignore - This is intentional to help with memory cleanup
-			response.model = null;
-			// @ts-ignore - This is intentional to help with memory cleanup
-			response = null;
+			if (response) {
+				// Clear individual properties
+				// @ts-ignore - This is intentional to help with memory cleanup
+				response.content = undefined;
+				// @ts-ignore - This is intentional to help with memory cleanup
+				response.stop_reason = undefined;
+				// @ts-ignore - This is intentional to help with memory cleanup
+				response.usage = undefined;
+				// @ts-ignore - This is intentional to help with memory cleanup
+				response.id = undefined;
+				// @ts-ignore - This is intentional to help with memory cleanup
+				response.model = undefined;
+			}
 
 			memoryMonitor.logMemoryUsage('llm_request_complete', {
 				responseLength: responseText.length,
@@ -135,6 +141,9 @@ export class AnthropicService implements LLMService {
 		const memoryMonitor = getMemoryMonitor();
 
 		try {
+			// Force GC at the start to reclaim memory from previous operations
+			memoryMonitor.forceGC();
+
 			// Record memory usage at start
 			const promptLength = request.prompt ? request.prompt.length : 0;
 			const systemPromptLength = request.systemPrompt ? request.systemPrompt.length : 0;
@@ -161,16 +170,24 @@ export class AnthropicService implements LLMService {
 
 			// Set up memory-optimized event handler for streaming
 			let totalTextLength = 0;
+			let chunkCount = 0;
 			const wrappedOnText = (text: string) => {
 				totalTextLength += text.length;
+				chunkCount++;
 				// Call the original handler
 				onText(text);
 
-				// Periodically log memory usage on long generations
-				if (totalTextLength % 10000 === 0) {
+				// More frequent logging and GC for long generations
+				if (totalTextLength % 5000 === 0) {
 					memoryMonitor.logMemoryUsage('llm_stream_progress', {
-						totalTextLength
+						totalTextLength,
+						chunkCount
 					});
+
+					// Force GC every 20K characters to prevent memory accumulation
+					if (totalTextLength % 20000 === 0) {
+						memoryMonitor.forceGC();
+					}
 				}
 			};
 
@@ -180,14 +197,15 @@ export class AnthropicService implements LLMService {
 			const message = await stream.finalMessage();
 
 			memoryMonitor.logMemoryUsage('llm_stream_completed', {
-				totalTextLength
+				totalTextLength,
+				chunkCount
 			});
 
 			// First, check if there is content and it's a text block
 			const firstContent = message.content[0];
 			const responseText =
 				firstContent && firstContent.type === 'text' ? firstContent.text : '';
-				
+
 			// Create response object
 			const result = {
 				text: responseText,
@@ -199,28 +217,52 @@ export class AnthropicService implements LLMService {
 						(message.usage?.output_tokens || 0),
 				},
 			};
-			
-			// Clean up large objects - helps with memory management
-			// @ts-ignore - This is intentional to help with memory cleanup
-			message.content = null;
-			
+
+			// Aggressively clean up large objects - helps with memory management
+			// Instead of nulling const variables (which causes runtime errors),
+			// use a safer approach to help with memory cleanup
+			if (message) {
+				// Use type assertions to avoid TypeScript errors
+				// @ts-ignore - This is intentional to help with memory cleanup
+				(message as any).content = undefined;
+				// @ts-ignore - This is intentional to help with memory cleanup
+				(message as any).usage = undefined;
+				// @ts-ignore - This is intentional to help with memory cleanup
+				(message as any).id = undefined;
+				// @ts-ignore - This is intentional to help with memory cleanup
+				(message as any).model = undefined;
+				// @ts-ignore - This is intentional to help with memory cleanup
+				(message as any).stop_reason = undefined;
+			}
+
 			// Try to clean up stream resources
 			try {
-				// @ts-ignore - This is intentional to help with memory cleanup
-				stream.controller.abort();
+				// Use controller.abort() to release resources
+				if (stream && stream.controller) {
+					stream.controller.abort();
+				}
+				// Anthropic MessageStream doesn't have removeAllListeners method
+				// Just let it get garbage collected naturally
+				// DO NOT try to null out stream as it's a const
 			} catch (abortError) {
 				// Ignore abort errors, just trying to free resources
 			}
-			
+
 			memoryMonitor.logMemoryUsage('llm_stream_cleanup_complete');
-			
+
+			// Force final GC after cleanup
+			memoryMonitor.forceGC();
+
 			return result;
 		} catch (error: unknown) {
 			memoryMonitor.logMemoryUsage('llm_stream_error', {
 				errorType: error instanceof Error ? error.constructor.name : 'Unknown',
 				message: error instanceof Error ? error.message : String(error)
 			});
-			
+
+			// Force GC even on error path
+			memoryMonitor.forceGC();
+
 			throw new Error(
 				`LLM streaming request failed: ${this.getErrorMessage(error)}`,
 			);

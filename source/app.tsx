@@ -41,10 +41,15 @@ const App: React.FC<AppProps> = ({
 		}
 	});
 
-	// Handle command selection from home screen
-	const handleCommandSelect = (selectedCommand: string) => {
+	// Handle command selection from home screen with options
+	const handleCommandSelect = (selectedCommand: string, commandOptions?: any) => {
 		setCommand(selectedCommand);
 		setArgs([]);
+		
+		// If options were provided, merge them with the current options
+		if (commandOptions) {
+			options = {...options, ...commandOptions};
+		}
 	};
 
 	// Handle submitting input for ask/task commands

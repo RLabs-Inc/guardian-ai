@@ -509,6 +509,20 @@ export function shouldPaginateResponse(data: any, maxSize: number = 50000): bool
       }
     }
 
+    // Check for specific response types that often lead to large outputs
+    if (data.action === AgentActionType.EXTRACT_SYMBOLS ||
+        data.action === AgentActionType.ANALYZE_RELATIONSHIPS) {
+      // These actions typically produce large outputs if:
+      // - There are many chunks in the file
+      // - The file is large (content > 10K characters)
+      // - Many symbols are being analyzed (>20)
+      if ((data.data?.chunks?.length || 0) > 20 ||
+          (data.data?.content?.length || 0) > 10000 ||
+          (data.data?.symbols?.length || 0) > 20) {
+        return true;
+      }
+    }
+
     return false;
   } catch (error) {
     // If we can't stringify, assume it's complex enough to warrant pagination
