@@ -14,6 +14,8 @@ interface HomeScreenProps {
 	onSelectCommand: (command: string, options?: any) => void;
 	isLoading?: boolean;
 	loadingMessage?: string;
+	currentDirectory?: string;
+	directoryExclusions?: string;
 }
 
 // Define custom item type with description
@@ -27,11 +29,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 	onSelectCommand,
 	isLoading = false,
 	loadingMessage = 'Loading...',
+	currentDirectory = '',
+	directoryExclusions = '',
 }) => {
 	const {currentTheme} = useTheme();
 	const [currentTime, setCurrentTime] = useState(new Date());
 	const [showDirectorySelector, setShowDirectorySelector] = useState(false);
-	const [projectDirectory, setProjectDirectory] = useState<string>('');
+	const [projectDirectory, setProjectDirectory] = useState<string>(currentDirectory);
+	const [exclusions, setExclusions] = useState<string>(directoryExclusions);
 	const [hasGuardianIndex, setHasGuardianIndex] = useState(false);
 	const [systemInfo] = useState({
 		os: os.type(),
@@ -71,8 +76,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 	});
 
 	// Handle directory selection
-	const handleDirectorySelected = async (selectedDirectory: string) => {
+	const handleDirectorySelected = async (selectedDirectory: string, selectedExclusions?: string) => {
 		setProjectDirectory(selectedDirectory);
+		if (selectedExclusions) {
+			setExclusions(selectedExclusions);
+		}
 		await checkGuardianIndex(selectedDirectory);
 		setShowDirectorySelector(false);
 	};
@@ -87,7 +95,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 		if (item.value === 'select-directory') {
 			setShowDirectorySelector(true);
 		} else {
-			onSelectCommand(item.value, {projectPath: projectDirectory});
+			onSelectCommand(item.value, {
+				projectPath: projectDirectory,
+				exclusions: exclusions
+			});
 		}
 	};
 
@@ -125,6 +136,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 		return (
 			<DirectorySelector
 				initialPath={projectDirectory || process.cwd()}
+				initialExclusions={exclusions}
 				onSelect={handleDirectorySelected}
 				onCancel={handleDirectorySelectCancel}
 			/>

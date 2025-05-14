@@ -1,8 +1,11 @@
 import * as path from 'path';
 import * as dotenv from 'dotenv';
-import {AnthropicService} from './services/llm/llmService.js';
+// LLM service isn't needed for unified indexing
+// import {AnthropicService} from './services/llm/llmService.js';
 import {NodeFileSystemService} from './services/fileSystem/fileSystemService.js';
-import {LLMDirectedIndexingService} from './services/indexing/llmDirected/llmDirectedIndexingService.js';
+// LLMDirectedIndexingService no longer exists after refactor
+import {UnifiedIndexingService} from './services/indexing/unifiedIndexingService.js';
+import {IndexingCoordinator} from './services/indexing/indexingCoordinator.js';
 
 // Load environment variables
 dotenv.config();
@@ -14,11 +17,11 @@ if (!process.env['ANTHROPIC_API_KEY']) {
 }
 
 /**
- * Demo script for testing the LLM-directed indexing approach
+ * Demo script for testing the unified indexing approach
  */
 async function runDemo() {
 	try {
-		console.log('Starting LLM-directed indexing demo...');
+		console.log('Starting unified indexing demo...');
 
 		// Get the target directory to analyze
 		const targetDir = process.argv[2] || '.';
@@ -28,32 +31,50 @@ async function runDemo() {
 
 		// Create the required services
 		const fileSystem = new NodeFileSystemService();
-		const llmService = new AnthropicService();
+		// LLM service isn't needed for unified indexing
+		// const llmService = new AnthropicService();
 
-		// Create the LLM-directed indexing service
-		const indexingService = new LLMDirectedIndexingService(
-			fileSystem,
-			llmService,
-		);
+		// Create the unified indexing service
+		const coordinator = new IndexingCoordinator(fileSystem);
+		const indexingService = new UnifiedIndexingService(coordinator, fileSystem);
 
 		// Run the indexing process with a small sample size for the demo
 		console.log('Starting indexing process...');
 		const startTime = Date.now();
 
-		const indexedCodebase = await indexingService.indexCodebase(
+		const result = await indexingService.analyzeCodebase(
 			absoluteTargetDir,
 			{
-				maxFiles: 1000,
+				batchSize: 50,
+				maxDepth: 5
 			},
 		);
+
+		const indexedCodebase = {
+			statistics: {
+				totalFiles: result.stats.filesIndexed,
+				totalSymbols: result.stats.nodesExtracted,
+				totalDependencies: result.stats.dependenciesDiscovered || 0
+			},
+			symbols: Array.from(result.understanding.codeNodes.entries())
+				.map(([id, node]) => ({
+					id,
+					type: node.type,
+					name: node.name,
+					location: {
+						filePath: node.path,
+						startLine: node.location.start.line,
+						endLine: node.location.end.line
+					}
+				}))
+		};
 
 		const endTime = Date.now();
 		const duration = (endTime - startTime) / 1000; // in seconds
 
 		// Print results
 		console.log(
-			'\
---- Indexing Results ---',
+			'\n--- Indexing Results ---',
 		);
 		console.log(`Files indexed: ${indexedCodebase.statistics.totalFiles}`);
 		console.log(
@@ -67,37 +88,23 @@ async function runDemo() {
 		// Print some sample symbols if available
 		if (indexedCodebase.statistics.totalSymbols > 0) {
 			console.log(
-				'\
---- Sample Symbols ---',
+				'\n--- Sample Symbols ---',
 			);
-			const symbols = Object.values(indexedCodebase.symbols).slice(0, 5);
+			const symbols = indexedCodebase.symbols.slice(0, 5);
 			for (const symbol of symbols) {
 				console.log(
-					`${symbol.type}: ${symbol.name} (${symbol.location.filePath}:${symbol.location.startLine})`,
+					`${String(symbol.type)}: ${String(symbol.name)} (${String(symbol.location.filePath)}:${symbol.location.startLine})`,
 				);
 			}
 		}
 
-		// Print some sample dependencies if available
-		if (indexedCodebase.statistics.totalDependencies > 0) {
-			console.log(
-				'\
---- Sample Dependencies ---',
-			);
-			const dependencies = indexedCodebase.dependencies.slice(0, 5);
-			for (const dependency of dependencies) {
-				console.log(
-					`${dependency.source} -> ${dependency.target} (${dependency.type})`,
-				);
-			}
-		}
+		// Save understanding to file
+		const outputPath = path.join(absoluteTargetDir, '.guardian/emergent/understanding.json');
+		await indexingService.saveUnderstanding(result.understanding, outputPath);
+		console.log(`Saved understanding to: ${outputPath}`);
 
-		console.log(
-			'\
-Demo completed successfully!',
-		);
 	} catch (error) {
-		console.error('Error running demo:', error);
+		console.error('Error in demo:', error);
 		process.exit(1);
 	}
 }

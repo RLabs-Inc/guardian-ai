@@ -1,0 +1,312 @@
+  /**
+   * Import existing understanding into the context
+   */
+  private importExistingUnderstanding(
+    understanding: UnifiedCodebaseUnderstanding,
+    context: SharedAnalysisContext
+  ): void {
+    // Import file system
+    context.fileSystem = understanding.fileSystem;
+    
+    // Import language information
+    context.languages = understanding.languages;
+    
+    // Import code nodes
+    understanding.codeNodes.forEach((node, id) => {
+      context.codeNodes.set(id, node);
+    });
+    
+    // Import patterns
+    context.patterns = [...understanding.patterns];
+    
+    // Import relationships
+    context.relationships = [...understanding.relationships];
+    
+    // Import semantic structures
+    context.concepts = [...understanding.concepts];
+    context.semantics.semanticUnits = [...understanding.semanticUnits];
+    
+    // Import data flow
+    understanding.dataFlow.nodes.forEach((node, id) => {
+      context.dataFlow.nodes.set(id, node);
+    });
+    context.dataFlow.flows = [...understanding.dataFlow.flows];
+    context.dataFlow.paths = [...understanding.dataFlow.paths];
+    
+    // Import dependencies
+    if (understanding.dependencies) {
+      context.dependencies = {
+        dependencies: new Map(understanding.dependencies.dependencies),
+        imports: [...understanding.dependencies.imports],
+        exports: [...understanding.dependencies.exports]
+      };
+    }
+    
+    // Mark everything as already processed
+    for (const node of context.fileSystem.root.children) {
+      if ('extension' in node) {
+        context.processedFiles.add(node.path);
+      }
+    }
+    
+    console.log(`Imported existing understanding with ${context.codeNodes.size} code nodes and ${context.relationships.length} relationships`);
+  }
+  
+  /**
+   * Process only targeted files
+   */
+  private async processTargetedFiles(
+    targetFiles: string[],
+    context: SharedAnalysisContext,
+    analyzersToRun: string[]
+  ): Promise<void> {
+    // Clear processed state for targeted files to force reprocessing
+    for (const filePath of targetFiles) {
+      context.processedFiles.delete(filePath);
+    }
+    
+    // Process in batches to manage memory
+    const batchSize = this.calculateBatchSize(context);
+    
+    // Process in batches
+    for (let i = 0; i < targetFiles.length; i += batchSize) {
+      const batch = targetFiles.slice(i, i + batchSize);
+      
+      console.log(`Processing batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(targetFiles.length/batchSize)}: ${batch.length} files`);
+      
+      for (const filePath of batch) {
+        try {
+          // Find file node or create it if it doesn't exist
+          let fileNode = this.findFileNode(context.fileSystem.root, filePath);
+          
+          if (!fileNode) {
+            // File is new, create a node for it
+            const fileInfo = await this.fileSystemService.getFileInfo(filePath);
+            if (!fileInfo) continue;
+            
+            fileNode = {
+              path: filePath,
+              name: fileInfo.name,
+              extension: fileInfo.extension,
+              contentHash: '',
+              size: fileInfo.size,
+              created: new Date(fileInfo.created),
+              modified: new Date(fileInfo.modified),
+              metadata: {}
+            };
+          }
+          
+          await this.processFile(fileNode, context, analyzersToRun);
+        } catch (error) {
+          console.error(`Error processing targeted file ${filePath}:`, error);
+        }
+      }
+      
+      // Force memory cleanup after each batch
+      await context.requestMemoryRelease(50);
+      
+      // Log progress
+      console.log(`Processed ${Math.min(i + batchSize, targetFiles.length)} of ${targetFiles.length} files`);
+    }
+  }
+  
+  /**
+   * Update the file system tree while maintaining existing structure
+   */
+  private async updateFileSystemTree(
+    existingRoot: DirectoryNode,
+    context: SharedAnalysisContext
+  ): Promise<void> {
+    console.log(`Updating file system tree for ${context.rootPath}`);
+    
+    // Get the current file system state
+    const currentRoot = await this.fileSystemService.scanDirectory(context.rootPath, {
+      exclude: context.options.exclude,
+      maxDepth: context.options.maxDepth
+    });
+    
+    if (!currentRoot) {
+      throw new Error(`Failed to scan directory ${context.rootPath}`);
+    }
+    
+    // Update context with the new root but maintain existing children where possible
+    context.fileSystem.root = this.mergeDirectoryNodes(existingRoot, currentRoot);
+    
+    // Update file and directory counts
+    this.updateFileSystemStats(context.fileSystem);
+  }
+  
+  /**
+   * Process a file with only the specified analyzers
+   */
+  private async processFile(
+    file: FileNode, 
+    context: SharedAnalysisContext,
+    analyzersToRun?: string[]
+  ): Promise<void> {
+    // Skip already processed files
+    if (context.processedFiles.has(file.path)) {
+      return;
+    }
+    
+    try {
+      // Get file content
+      const content = await context.getFileContent(file.path);
+      
+      // Have each analyzer process the file
+      for (const analyzer of this.analyzers) {
+        // Skip analyzers not in the run list if specified
+        if (analyzersToRun && !analyzersToRun.includes(analyzer.id)) {
+          continue;
+        }
+        
+        try {
+          await analyzer.analyzeFile(file, content, context);
+        } catch (error) {
+          console.error(`Error in analyzer ${analyzer.id} for file ${file.path}:`, error);
+        }
+      }
+      
+      // Mark as processed
+      context.processedFiles.add(file.path);
+    } catch (error) {
+      console.error(`Error processing file ${file.path}:`, error);
+    } finally {
+      // Release file content
+      context.releaseFileContent(file.path);
+    }
+  }
+  
+  /**
+   * Find a file node in the directory tree
+   */
+  private findFileNode(root: DirectoryNode, filePath: string): FileNode | null {
+    if (root.path === filePath) {
+      return null; // This is a directory, not a file
+    }
+    
+    for (const child of root.children) {
+      if ('extension' in child) {
+        // This is a file
+        if (child.path === filePath) {
+          return child;
+        }
+      } else {
+        // This is a directory
+        if (filePath.startsWith(child.path + '/')) {
+          const found = this.findFileNode(child, filePath);
+          if (found) return found;
+        }
+      }
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Merge two directory nodes, maintaining existing children where possible
+   */
+  private mergeDirectoryNodes(existing: DirectoryNode, current: DirectoryNode): DirectoryNode {
+    // Create maps for faster lookups
+    const existingChildMap = new Map<string, DirectoryNode | FileNode>();
+    for (const child of existing.children) {
+      existingChildMap.set(child.path, child);
+    }
+    
+    // Create new merged children array
+    const mergedChildren: (DirectoryNode | FileNode)[] = [];
+    
+    // Process current children
+    for (const currentChild of current.children) {
+      const existingChild = existingChildMap.get(currentChild.path);
+      
+      if (existingChild) {
+        // Child exists in both trees
+        if ('extension' in currentChild) {
+          // This is a file
+          const currentFile = currentChild as FileNode;
+          const existingFile = existingChild as FileNode;
+          
+          // Check if file has changed (by modified date)
+          if (currentFile.modified.getTime() === existingFile.modified.getTime()) {
+            // File hasn't changed, use existing node
+            mergedChildren.push(existingFile);
+          } else {
+            // File has changed, use current node but preserve code nodes
+            mergedChildren.push({
+              ...currentFile,
+              metadata: {
+                ...existingFile.metadata,
+                ...currentFile.metadata,
+                hasChanged: true
+              }
+            });
+          }
+        } else {
+          // This is a directory, recurse
+          mergedChildren.push(
+            this.mergeDirectoryNodes(
+              existingChild as DirectoryNode, 
+              currentChild as DirectoryNode
+            )
+          );
+        }
+      } else {
+        // New child, add it
+        mergedChildren.push(currentChild);
+      }
+    }
+    
+    // Return merged node
+    return {
+      ...current,
+      children: mergedChildren,
+      metadata: {
+        ...existing.metadata,
+        ...current.metadata
+      }
+    };
+  }
+  
+  /**
+   * Update file system statistics
+   */
+  private updateFileSystemStats(fileSystem: FileSystemTree): void {
+    let fileCount = 0;
+    let directoryCount = 0;
+    let totalSize = 0;
+    const languageCounts: Record<string, number> = {};
+    const fileExtensions: Record<string, number> = {};
+    
+    const countStats = (node: DirectoryNode | FileNode) => {
+      if ('extension' in node) {
+        // This is a file
+        fileCount++;
+        totalSize += node.size;
+        
+        const ext = node.extension.toLowerCase();
+        fileExtensions[ext] = (fileExtensions[ext] || 0) + 1;
+        
+        if (node.languageType) {
+          languageCounts[node.languageType] = (languageCounts[node.languageType] || 0) + 1;
+        }
+      } else {
+        // This is a directory
+        directoryCount++;
+        
+        for (const child of node.children) {
+          countStats(child);
+        }
+      }
+    };
+    
+    // Count from root
+    countStats(fileSystem.root);
+    
+    // Update stats
+    fileSystem.fileCount = fileCount;
+    fileSystem.directoryCount = directoryCount;
+    fileSystem.totalSize = totalSize;
+    fileSystem.languageCounts = languageCounts;
+    fileSystem.fileExtensions = fileExtensions;
+  }

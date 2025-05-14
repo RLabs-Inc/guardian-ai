@@ -1,22 +1,64 @@
 // source/services/indexing/index.ts
 
-// Export submodules
-export * from './types.js';
-export * from './indexingService.js';
-export * from './llmDirected/index.js';
+// Transitional - support both old and new exports
+export * from './emergentIndexing/index.js';
 
-// Default exports
-import { TreeSitterIndexingService } from './indexingService.js';
-import {
-  LLMDirectedIndexingService,
-  VectorizedIndexingService
-} from './llmDirected/index.js';
+// Export core types first to avoid circular references
+export {
+  IndexingPhase,
+  UnifiedIndexingOptions,
+  ExtendedIndexingOptions,
+  CodeNodeType,
+  RelationshipType,
+  DataNodeRole,
+  DataFlowType,
+  DependencyType,
+  ClusteringAlgorithm,
+  ClusteringMetric
+} from './unifiedTypes.js';
+
+// Export data structures
+export type {
+  UnifiedIndexingResult,
+  UnifiedCodebaseUnderstanding,
+  FileNode,
+  DirectoryNode,
+  FileSystemTree,
+  CodeNode,
+  Relationship,
+  CodePattern,
+  Dependency,
+  ImportStatement,
+  ExportStatement,
+  DependencyGraph,
+  DataNode,
+  DataFlow,
+  DataFlowPath,
+  DataFlowGraph,
+  Concept,
+  SemanticUnit,
+  CodeCluster
+} from './unifiedTypes.js';
+
+// Export interface
+export type { UnifiedIndexingService as IndexingServiceInterface } from './unifiedTypes.js';
+
+// Export analyzers implementations
+export * from './analyzers/index.js';
+
+// Export legacy service for backward compatibility
+export { TreeSitterIndexingService } from './indexingService.js';
+
+// Export the unified services
+import { 
+  UnifiedIndexingService, 
+  UnifiedIndexingServiceFactory 
+} from './unifiedIndexingService.js';
 
 export {
-  TreeSitterIndexingService,
-  LLMDirectedIndexingService,
-  VectorizedIndexingService
+  UnifiedIndexingService,
+  UnifiedIndexingServiceFactory
 };
 
-// Default export - Now we prefer the Vectorized LLM-directed version as default
-export default VectorizedIndexingService;
+// Default export
+export default UnifiedIndexingService;

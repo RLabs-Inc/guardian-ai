@@ -121,6 +121,59 @@ export interface CodeCluster {
 export type SimilarityMatrix = Map<string, Map<string, number>>;
 
 /**
+ * Dependency Analysis Types
+ */
+
+export enum DependencyType {
+  LANGUAGE_CORE = 'language_core',
+  STANDARD_LIBRARY = 'standard_library',
+  INTERNAL_MODULE = 'internal_module',
+  EXTERNAL_PACKAGE = 'external_package',
+  LOCAL_FILE = 'local_file',
+  UNKNOWN = 'unknown'
+}
+
+export interface ImportStatement {
+  id: string;
+  moduleSpecifier: string;
+  importedSymbols: string[];  // Can be empty for side-effect only imports
+  defaultImport?: string;
+  sourceFileId: string;
+  sourceFilePath: string;
+  line: number;
+  dependencyType: DependencyType;
+  resolvedPath?: string;
+  confidence: number;
+}
+
+export interface ExportStatement {
+  id: string;
+  exportedSymbols: string[];
+  defaultExport?: string;
+  sourceFileId: string;
+  sourceFilePath: string;
+  line: number;
+  confidence: number;
+}
+
+export interface Dependency {
+  id: string;
+  name: string;
+  type: DependencyType;
+  version?: string;
+  importCount: number;
+  importedSymbols: Map<string, number>; // Symbol -> usage count
+  importingFiles: Set<string>;
+  confidence: number;
+}
+
+export interface DependencyGraph {
+  dependencies: Map<string, Dependency>;
+  imports: ImportStatement[];
+  exports: ExportStatement[];
+}
+
+/**
  * Options for emergent indexing
  */
 export interface EmergentIndexingOptions {
@@ -142,9 +195,6 @@ export interface EmergentIndexingOptions {
   /** Whether to perform semantic analysis */
   semanticAnalysis?: boolean;
   
-  /** Which semantic analyzer to use ('standard' or 'enhanced') */
-  semanticAnalyzerType?: 'standard' | 'enhanced';
-  
   /** Whether to analyze test files */
   includeTests?: boolean;
   
@@ -159,6 +209,9 @@ export interface EmergentIndexingOptions {
   
   /** Minimum confidence level for including data flows */
   dataFlowMinConfidence?: number;
+  
+  /** Whether to analyze dependencies */
+  analyzeDependencies?: boolean;
 }
 
 /**
@@ -357,6 +410,13 @@ export interface ISemanticAnalyzer {
 }
 
 /**
+ * Interface for Dependency Analyzers
+ */
+export interface IDependencyAnalyzer {
+  analyzeDependencies(understanding: CodebaseUnderstanding): Promise<DependencyGraph>;
+}
+
+/**
  * The core codebase understanding model
  */
 export interface CodebaseUnderstanding {
@@ -396,6 +456,9 @@ export interface CodebaseUnderstanding {
 
   /* Data Flow */
   dataFlow: DataFlowGraph;
+
+  /* Dependencies */
+  dependencies?: DependencyGraph;
 
   /* Metadata */
   metadata: Record<string, any>;
@@ -437,6 +500,9 @@ export interface EmergentIndexingResult {
 
     /** Number of data flow paths identified */
     dataFlowPathsIdentified?: number;
+    
+    /** Number of dependencies discovered */
+    dependenciesDiscovered?: number;
   };
   
   errors?: Array<{
@@ -512,4 +578,11 @@ export interface EmergentIndexingService {
       minConfidence?: number;
     }
   ): Promise<DataFlowGraph>;
+  
+  /**
+   * Analyze dependencies in the codebase
+   */
+  analyzeDependencies(
+    understanding: CodebaseUnderstanding
+  ): Promise<DependencyGraph>;
 }

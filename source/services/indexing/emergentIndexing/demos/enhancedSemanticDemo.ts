@@ -40,20 +40,15 @@ async function runDemo() {
   // Create file system service
   const fileSystem: FileSystemService = new NodeFileSystemService();
   
-  // Create the emergent indexing service with enhanced semantic analyzer
+  // Create the emergent indexing service
   printSection('Creating Indexing Service');
-  const indexingService = EmergentIndexingServiceFactory.create(fileSystem, {
-    semanticAnalysis: true,
-    semanticAnalyzerType: 'enhanced', // Use the enhanced semantic analyzer
-    maxDepth,
-    exclude: ['node_modules', '.git', 'dist', 'build', '.cache'],
-  });
+  const indexingService = EmergentIndexingServiceFactory.create(fileSystem);
   
-  printInfo('Indexing service created with enhanced semantic analyzer');
+  printInfo('Indexing service created with semantic analyzer');
   
   // Run the emergent indexing
   printSection('Running Codebase Analysis');
-  console.log('Analyzing the codebase using emergent indexing with enhanced semantic analysis...');
+  console.log('Analyzing the codebase using emergent indexing with semantic analysis...');
   
   const startTime = Date.now();
   const result = await indexingService.analyzeCodebase(targetDir);

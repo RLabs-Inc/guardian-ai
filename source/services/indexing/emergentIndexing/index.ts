@@ -14,8 +14,8 @@ export { LanguageDetector } from './languageDetector.js';
 export { PatternDiscovery } from './patternDiscovery.js';
 export { RelationshipDetector } from './relationshipDetector.js';
 export { SemanticAnalyzer } from './semanticAnalyzer.js';
-export { EnhancedSemanticAnalyzer } from './semanticAnalyzer.enhanced.js';
 export { UnderstandingStorage } from './understandingStorage.js';
+export { DependencyAnalyzer } from './dependencyAnalyzer.js';
 
 // Types
 export type {
@@ -33,7 +33,12 @@ export type {
   Concept,
   SemanticUnit,
   SemanticResults,
-  ISemanticAnalyzer
+  ISemanticAnalyzer,
+  IDependencyAnalyzer,
+  ImportStatement,
+  ExportStatement,
+  Dependency,
+  DependencyGraph
 } from './types.js';
 
-export { CodeNodeType, RelationshipType } from './types.js';
+export { CodeNodeType, RelationshipType, DependencyType } from './types.js';

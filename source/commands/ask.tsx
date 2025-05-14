@@ -112,7 +112,7 @@ const AskCommand: React.FC<AskCommandProps> = ({question, options}) => {
         const stewardService = new VectorizedCodebaseStewardService(
           llmService,
           fileSystem,
-          indexingService,
+          indexingService as any, // Type conversion during refactoring
           ragService
         );
         

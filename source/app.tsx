@@ -26,10 +26,12 @@ const App: React.FC<AppProps> = ({
 	options,
 }) => {
 	const [loading, _setLoading] = useState(false);
-	const [error, _setError] = useState<string | null>(null);
+	const [error, setError] = useState<string | null>(null);
 	const [command, setCommand] = useState<string | undefined>(initialCommand);
 	const [args, setArgs] = useState<string[]>(initialArgs);
 	const [inputValue, setInputValue] = useState<string>('');
+	const [projectDirectory, setProjectDirectory] = useState<string>('');
+	const [directoryExclusions, setDirectoryExclusions] = useState<string>('');
 	const {exit} = useApp();
 
 	useInput((input, key) => {
@@ -42,14 +44,33 @@ const App: React.FC<AppProps> = ({
 	});
 
 	// Handle command selection from home screen with options
-	const handleCommandSelect = (selectedCommand: string, commandOptions?: any) => {
-		setCommand(selectedCommand);
-		setArgs([]);
-		
-		// If options were provided, merge them with the current options
+	const handleCommandSelect = (
+		selectedCommand: string,
+		commandOptions?: any,
+	) => {
+		// If options were provided, update state and merge with options
 		if (commandOptions) {
+			// Extract project directory and exclusions if provided
+			if (commandOptions.projectPath || projectDirectory) {
+				if (commandOptions.projectPath) {
+					setProjectDirectory(commandOptions.projectPath);
+				} else {
+					setProjectDirectory(projectDirectory);
+				}
+			} else {
+				// Show message to select directory first
+				setError('Please select the project directory first');
+				setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
+				return;
+			}
+			if (commandOptions.exclusions) {
+				setDirectoryExclusions(commandOptions.exclusions);
+			}
 			options = {...options, ...commandOptions};
 		}
+		// Set command and clear args
+		setCommand(selectedCommand);
+		setArgs([]);
 	};
 
 	// Handle submitting input for ask/task commands
@@ -63,23 +84,50 @@ const App: React.FC<AppProps> = ({
 	const handleCommand = () => {
 		if (!command) {
 			// No command specified, show home screen
-			return <HomeScreen onSelectCommand={handleCommandSelect} />;
+			return (
+				<HomeScreen
+					onSelectCommand={handleCommandSelect}
+					currentDirectory={projectDirectory}
+					directoryExclusions={directoryExclusions}
+				/>
+			);
+		}
+
+		// Ensure project directory is in options for all commands
+		const commandOptions = {
+			...options,
+			projectPath: projectDirectory || options['projectPath'],
+			exclusions: directoryExclusions || options['exclusions'],
+		};
+
+		// If there's an error, show it
+		if (error) {
+			return (
+				<Box flexDirection="column">
+					<ThemedText variant="error">{error}</ThemedText>
+				</Box>
+			);
 		}
 
 		switch (command.toLowerCase()) {
 			case 'init':
-				return <InitCommand path={args[0]} options={options} />;
+				return (
+					<InitCommand
+						path={args[0] || projectDirectory}
+						options={commandOptions}
+					/>
+				);
 			case 'analyze':
-				return <AnalyzeCommand options={options} />;
+				return <AnalyzeCommand options={commandOptions} />;
 			case 'ask':
 				return args.length > 0 ? (
-					<AskCommand question={args.join(' ')} options={options} />
+					<AskCommand question={args.join(' ')} options={commandOptions} />
 				) : (
 					renderInputPrompt('Ask a question about your code:')
 				);
 			case 'task':
 				return args.length > 0 ? (
-					<TaskCommand description={args.join(' ')} options={options} />
+					<TaskCommand description={args.join(' ')} options={commandOptions} />
 				) : (
 					renderInputPrompt('Define a development task:')
 				);

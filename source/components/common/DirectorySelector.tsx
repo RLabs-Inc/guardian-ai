@@ -2,11 +2,13 @@
 import React, {useState} from 'react';
 import {Box, useInput} from 'ink';
 import SelectInput from 'ink-select-input';
+import TextInput from 'ink-text-input';
 import {Text as ThemedText} from './Text.js';
 import * as path from 'path';
 import fs from 'fs-extra';
 import os from 'os';
 import {useTheme} from '../../themes/context.js';
+import {getDefaultExclusionsString} from '../../services/utils/defaultExclusions.js';
 
 interface DirectoryItem {
 	label: string;
@@ -16,17 +18,20 @@ interface DirectoryItem {
 
 interface DirectorySelectorProps {
 	initialPath?: string;
-	onSelect: (directoryPath: string) => void;
+	initialExclusions?: string;
+	onSelect: (directoryPath: string, exclusions?: string) => void;
 	onCancel?: () => void;
 }
 
 export const DirectorySelector: React.FC<DirectorySelectorProps> = ({
 	initialPath = process.cwd(),
+	initialExclusions = getDefaultExclusionsString(),
 	onSelect,
 	onCancel,
 }) => {
 	const {currentTheme} = useTheme();
 	const [currentPath, setCurrentPath] = useState<string>(initialPath);
+	const [exclusions, setExclusions] = useState<string>(initialExclusions);
 	const [items, setItems] = useState<DirectoryItem[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -109,7 +114,7 @@ export const DirectorySelector: React.FC<DirectorySelectorProps> = ({
 	const handleSelect = (item: {value: string}) => {
 		if (item.value === '_select_current_') {
 			// Select the current directory
-			onSelect(currentPath);
+			onSelect(currentPath, exclusions);
 		} else if (item.value === '_up_') {
 			// Go up one level
 			const parentDir = path.dirname(currentPath);
@@ -170,6 +175,20 @@ export const DirectorySelector: React.FC<DirectorySelectorProps> = ({
 							);
 						}}
 					/>
+					
+					<Box flexDirection="column" marginTop={1}>
+						<ThemedText variant="highlight">Exclusions (comma-separated):</ThemedText>
+						<Box marginY={1}>
+							<ThemedText variant="dim">Directories to exclude: </ThemedText>
+							<TextInput value={exclusions} onChange={setExclusions} />
+						</Box>
+						<ThemedText variant="dim">
+							(Common excludes for all languages and build systems are pre-populated)
+						</ThemedText>
+						<ThemedText variant="dim">
+							Add or remove patterns as needed for your codebase
+						</ThemedText>
+					</Box>
 
 					<Box
 						marginTop={1}

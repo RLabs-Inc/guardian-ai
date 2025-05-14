@@ -62,7 +62,7 @@ const TaskCommand: React.FC<TaskCommandProps> = ({description, options}) => {
 				await agentService.initialize(
 					llmService,
 					fileSystemService,
-					indexingService,
+					indexingService as any, // Type conversion during refactoring
 					ragService
 				);
 				
